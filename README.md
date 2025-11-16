@@ -10,27 +10,20 @@ This application is not endorsed by or affiliated with Oqee. This application en
 - Python 3.x
 - Go ([Installation Guide](https://go.dev/doc/install))
 - ffmpeg
-
-### Steps
-
-1. Clone the repository:
-```bash
-git clone https://github.com/NohamR/OqeeRewind
-cd OqeeRewind
-```
-
-2. Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Install mp4ff-decrypt:
+- mp4ff-decrypt
 ```bash
 go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ```
 
-## Usage
-1. Create a `.env` file in the root directory and add your Oqee credentials (otherwise the script will try to use IP login first):
+### Steps
+Clone the repository and install dependencies:
+```bash
+git clone https://github.com/NohamR/OqeeRewind && cd OqeeRewind
+pip install -r requirements.txt
+```
+
+### Configuration
+Create a `.env` file in the root directory and add your Oqee credentials (otherwise the script will try to use IP login first):
 ```bash
 OQEE_USERNAME=your_username
 OQEE_PASSWORD=your_password
@@ -43,9 +36,15 @@ API_KEY=your_api_key_here
 API_URL=https://example.com/get-cached-keys
 ```
 
-2. Run the main script:
+## Usage
+### Via Command Line
 ```bash
 python main.py
+```
+
+### Via CLI Arguments
+```bash
+python main.py --output-dir ./downloads -id channel_id --start DATE --end DATA -sv best -sa best
 ```
 
 ## DRM Decryption
@@ -56,18 +55,20 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
 ## Todo
 - [x] Bruteforce implementation
 - [ ] Better README
-    - [ ] Lib used
-    - [ ] How to use
-    - [ ] Lib to install (pip + mp4ff + ffmpeg) 
+    - [x] Lib used
+    - [x] How to use
+    - [x] Lib to install (pip + mp4ff + ffmpeg) 
     - [ ] Demo GIF
 - [x] License
 - [ ] Lint code
 - [ ] Full implementation
-- [ ] Frenc/English full translation
+- [ ] French/English full translation
 - [ ] Add more comments in the code
 - [ ] Oqee widevine license implementation (.wvd) + mention README
 - [ ] Better output system
 - [ ] Verify mp4ff installation
+- [ ] CLI arguments implementation + documentation
+
 
 ## Libraries Used
 - [**aiohttp**](https://github.com/aio-libs/aiohttp) - Async HTTP client/server framework
