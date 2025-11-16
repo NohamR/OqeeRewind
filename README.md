@@ -7,7 +7,8 @@ This application is not endorsed by or affiliated with Oqee. This application en
 ## Installation
 
 ### Prerequisites
-- Python 3.x
+- Python 3.9+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - Go ([Installation Guide](https://go.dev/doc/install))
 - ffmpeg
 - mp4ff-decrypt
@@ -17,6 +18,14 @@ go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 
 ### Steps
 Clone the repository and install dependencies:
+
+**Using uv (recommended - faster):**
+```bash
+git clone https://github.com/NohamR/OqeeRewind && cd OqeeRewind
+uv sync
+```
+
+**Using pip:**
 ```bash
 git clone https://github.com/NohamR/OqeeRewind && cd OqeeRewind
 pip install -r requirements.txt
@@ -38,13 +47,20 @@ API_URL=https://example.com/get-cached-keys
 
 ## Usage
 ### Via Command Line
+
+**Using uv:**
+```bash
+uv run main.py
+```
+
+**Using Python directly:**
 ```bash
 python main.py
 ```
 
 ### Via CLI Arguments
 ```bash
-python main.py --output-dir ./downloads -id channel_id --start DATE --end DATA -sv best -sa best
+uv run main.py --output-dir ./downloads -id channel_id --start DATE --end DATA -sv best -sa best
 ```
 
 ## DRM Decryption
