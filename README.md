@@ -29,6 +29,25 @@ pip install -r requirements.txt
 go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ```
 
+## Usage
+1. Create a `.env` file in the root directory and add your Oqee credentials (otherwise the script will try to use IP login first):
+```bash
+OQEE_USERNAME=your_username
+OQEE_PASSWORD=your_password
+```
+
+Optionally, you can set the following environment variables in the `.env` file:
+```bash
+OUTPUT_DIR=./downloads
+API_KEY=your_api_key_here
+API_URL=https://example.com/get-cached-keys
+```
+
+2. Run the main script:
+```bash
+python main.py
+```
+
 ## DRM Decryption
 
 ### Instructions (Widevine)
