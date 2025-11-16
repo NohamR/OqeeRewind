@@ -1,11 +1,12 @@
+"""Input utilities for user prompts and channel/stream selection."""
 import datetime
 import requests
-from InquirerPy import prompt
 from prompt_toolkit.validation import Validator, ValidationError
+from InquirerPy import prompt
 from InquirerPy.validator import EmptyInputValidator
 from InquirerPy.base.control import Choice
 
-from .stream import (
+from utils.stream import (
     get_manifest,
     parse_mpd_manifest,
     organize_by_content_type
@@ -20,11 +21,11 @@ class DatetimeValidator(Validator):
     def validate(self, document):
         try:
             datetime.datetime.strptime(document.text, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
+        except ValueError as exc:
             raise ValidationError(
                 message="Veuillez entrer une date/heure valide au format YYYY-MM-DD HH:MM:SS",
                 cursor_position=len(document.text),
-            )
+            ) from exc
 
 class DurationValidator(Validator):
     """
@@ -38,16 +39,20 @@ class DurationValidator(Validator):
                 cursor_position=len(document.text),
             )
         try:
-            h, m, s = [int(part) for part in parts]
+            _, m, s = [int(part) for part in parts]
             if not (0 <= m < 60 and 0 <= s < 60):
                 raise ValueError("Les minutes et les secondes doivent être entre 0 et 59.")
-        except ValueError:
+        except ValueError as exc:
             raise ValidationError(
                 message="Format invalide. Utilisez HH:MM:SS avec des nombres valides.",
                 cursor_position=len(document.text),
-            )
-        
+            ) from exc
 def get_date_input():
+    """Prompt user for start and end date/time or duration.
+
+    Returns:
+        tuple: A tuple containing (start_date, end_date) as datetime objects.
+    """
     question_start_date = [
         {
             "type": "input",
@@ -83,7 +88,10 @@ def get_date_input():
             "type": "input",
             "message": "Entrez une date/heure de fin (YYYY-MM-DD HH:MM:SS):",
             "name": "datetime",
-            "default": start_date_result["datetime"] if start_date_result else "2025-01-01 12:00:00",
+            "default": (
+                start_date_result["datetime"] if start_date_result
+                else "2025-01-01 12:00:00"
+            ),
             "validate": DatetimeValidator(),
             "when": lambda answers: answers["input_type"] == "Date/heure de fin",
         },
@@ -129,7 +137,10 @@ def select_oqee_channel():
 
         channels_data = data["result"]["channels"]
         choices = [
-            {"name": f"{channel_info.get('name', 'Nom inconnu')}", "value": channel_id}
+            {
+                "name": f"{channel_info.get('name', 'Nom inconnu')}",
+                "value": channel_id
+            }
             for channel_id, channel_info in channels_data.items()
         ]
         choices.sort(key=lambda x: x['name'])
@@ -172,7 +183,7 @@ def select_oqee_channel():
     except (ValueError, KeyError, IndexError) as e:
         print(f"Une erreur inattenante est survenue : {e}")
         return None
-    
+
 
 def prompt_for_stream_selection(stream_info, already_selected_types):
     """Guide l'utilisateur pour sélectionner un flux, en désactivant les types déjà choisis."""
@@ -242,65 +253,73 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
 
     except (KeyboardInterrupt, TypeError):
         return None
-    
+
 
 def stream_selection():
+    """Guide user through channel and stream selection process.
+
+    Returns:
+        dict: Dictionary of selected streams by content type, or None if cancelled.
+    """
     selected_channel = select_oqee_channel()
 
-    if selected_channel:
-        print("\n✅ Chaîne sélectionnée :")
-        print(f"  - Nom : {selected_channel.get('name')}")
-        print(f"  - ID : {selected_channel.get('id')}")
+    if not selected_channel:
+        return None
 
-        dash_id = selected_channel.get('streams', {}).get('dash')
-        if dash_id:
-            mpd_content = get_manifest(dash_id)
-            manifest_info = parse_mpd_manifest(mpd_content)
-            organized_info = organize_by_content_type(manifest_info)
+    print("\n✅ Chaîne sélectionnée :")
+    print(f"  - Nom : {selected_channel.get('name')}")
+    print(f"  - ID : {selected_channel.get('id')}")
 
-            final_selections = {}
+    dash_id = selected_channel.get('streams', {}).get('dash')
+    if not dash_id:
+        print("Aucun flux DASH trouvé pour cette chaîne.")
+        return None
 
-            while True:
-                selection = prompt_for_stream_selection(
-                    organized_info, final_selections.keys()
+    mpd_content = get_manifest(dash_id)
+    manifest_info = parse_mpd_manifest(mpd_content)
+    organized_info = organize_by_content_type(manifest_info)
+
+    final_selections = {}
+
+    while True:
+        selection = prompt_for_stream_selection(
+            organized_info, final_selections.keys()
+        )
+
+        if selection:
+            content_type = selection.pop('content_type')
+            final_selections[content_type] = selection
+
+            print("\n--- Récapitulatif de votre sélection ---")
+            for stream_type, details in final_selections.items():
+                bitrate = details.get('bitrate_kbps')
+                track_id = details.get('track_id')
+                print(
+                    f"  - {stream_type.capitalize()}: "
+                    f"Bitrate {bitrate} kbps (ID: {track_id})"
                 )
+            print("----------------------------------------")
 
-                if selection:
-                    content_type = selection.pop('content_type')
-                    final_selections[content_type] = selection
+        continue_prompt = [
+            {
+                "type": "list",
+                "message": "Que souhaitez-vous faire ?",
+                "choices": [
+                    "Sélectionner un autre flux",
+                    "Terminer et continuer"
+                ],
+            }
+        ]
+        action_result = prompt(continue_prompt)
 
-                    print("\n--- Récapitulatif de votre sélection ---")
-                    for stream_type, details in final_selections.items():
-                        bitrate = details.get('bitrate_kbps')
-                        track_id = details.get('track_id')
-                        print(
-                            f"  - {stream_type.capitalize()}: "
-                            f"Bitrate {bitrate} kbps (ID: {track_id})"
-                        )
-                    print("----------------------------------------")
+        if (
+            not action_result or
+            action_result[0] == "Terminer et continuer"
+        ):
+            break
 
-                continue_prompt = [
-                    {
-                        "type": "list",
-                        "message": "Que souhaitez-vous faire ?",
-                        "choices": [
-                            "Sélectionner un autre flux",
-                            "Terminer et continuer"
-                        ],
-                    }
-                ]
-                action_result = prompt(continue_prompt)
+    if final_selections:
+        return final_selections
 
-                if (
-                    not action_result or
-                    action_result[0] == "Terminer et continuer"
-                ):
-                    break
-
-            if final_selections:
-                return final_selections
-            else:
-                print("\nAucun flux n'a été sélectionné.")
-
-        else:
-            print("Aucun flux DASH trouvé pour cette chaîne.")
+    print("\nAucun flux n'a été sélectionné.")
+    return None

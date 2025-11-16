@@ -28,4 +28,6 @@ build-backend = "hatchling.build"
 packages = ["."]
 
 [dependency-groups]
-dev = []
+dev = [
+    "pylint>=3.3.9",
+]
