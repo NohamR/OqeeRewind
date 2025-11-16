@@ -5,10 +5,12 @@ import os
 import asyncio
 import time
 from typing import Dict, Any
+from uuid import UUID
 
 import requests
 from dotenv import load_dotenv
 import aiohttp
+from pywidevine.pssh import PSSH
 
 load_dotenv()
 
@@ -31,6 +33,25 @@ def fetch_drm_keys(kid: str) -> str:
         os.getenv("API_URL"), headers=headers, json=data, timeout=10
     )
     return response.json()["key"]
+
+
+def generate_pssh(kid: str) -> str:
+    """Generate a PSSH box for a given KID.
+
+    Args:
+        kid: The key identifier string.
+    
+    Returns:
+        The PSSH box as a base64-encoded string.
+    """
+    default_pssh = (
+        "AAAAiHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAGgIARIQrKzUjhLvvbqkebbW2/EQtBIQ"
+        "WxKIsxtqP3iaIFYUu9f6xxIQXn4atxoopds39jbUXbiFVBIQUUJpv9uuzWKv4ccKTtooMRIQ"
+        "ocf9FUFCoGm775zPIBr3HRoAKgAyADgASABQAA=="
+    )
+    pssh = PSSH(default_pssh)
+    pssh.set_key_ids([UUID(kid.replace("-", "").lower())])
+    return pssh.dumps()
 
 
 def parse_mpd_manifest(mpd_content: str) -> Dict[str, Any]:
@@ -194,6 +215,7 @@ def parse_representation(
     return rep_info
 
 
+# pylint: disable=too-many-locals,too-many-branches
 def organize_by_content_type(manifest_info: Dict[str, Any]) -> Dict[str, Any]:
     """Organize manifest information by content type.
 
@@ -232,7 +254,7 @@ def organize_by_content_type(manifest_info: Dict[str, Any]) -> Dict[str, Any]:
                     'drm_info': adaptation_set.get('drm_info', []),
                     'segments': rep.get('segments', {}),
                 }
-                
+
                 if content_type == 'video':
                     width = rep.get('width')
                     height = rep.get('height')
