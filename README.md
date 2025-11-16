@@ -1,5 +1,9 @@
 # OqeeRewind - Oqee TV Live Downloader
 
+## Legal Warning
+
+This application is not endorsed by or affiliated with Oqee. This application enables you to download videos for offline viewing which may be forbidden by law in your country. The usage of this application may also cause a violation of the Terms of Service between you and the stream provider. This tool is not responsible for your actions; please make an informed decision before using this application.
+
 ## Installation
 
 ### Prerequisites
@@ -25,13 +29,10 @@ pip install -r requirements.txt
 go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ```
 
-## Libraries Used
+## DRM Decryption
 
-- **aiohttp** (3.13.2) - Async HTTP client/server framework
-- **InquirerPy** (0.3.4) - Interactive command line prompts
-- **python-dotenv** (1.2.1) - Environment variable management
-- **pywidevine** (1.9.0) - Widevine CDM implementation
-- **Requests** (2.32.5) - HTTP library
+### Instructions (Widevine)
+In order to decrypt DRM content, you will need to have a dumped CDM, after that you will need to place the CDM files into the `./widevine/` directory. For legal reasons we do not include the CDM with the software, and you will have to source one yourself.
 
 ## Todo
 - [x] Bruteforce implementation
@@ -48,3 +49,10 @@ go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 - [ ] Oqee widevine license implementation (.wvd) + mention README
 - [ ] Better output system
 - [ ] Verify mp4ff installation
+
+## Libraries Used
+- [**aiohttp**](https://github.com/aio-libs/aiohttp) - Async HTTP client/server framework
+- [**InquirerPy**](https://github.com/kazhala/InquirerPy) - Interactive command line prompts
+- [**python-dotenv**](https://github.com/theskumar/python-dotenv) - Environment variable management
+- [**pywidevine**](https://github.com/rlaphoenix/pywidevine) - Widevine CDM implementation
+- [**Requests**](https://github.com/psf/requests) - HTTP library
