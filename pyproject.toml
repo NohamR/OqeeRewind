@@ -10,11 +10,11 @@ authors = [
 ]
 
 dependencies = [
-    "aiohttp==3.13.2",
-    "InquirerPy==0.3.4",
-    "python-dotenv==1.2.1",
-    "pywidevine==1.9.0",
-    "Requests==2.32.5",
+    "aiohttp>=3.13.2",
+    "InquirerPy>=0.3.4",
+    "python-dotenv>=1.2.1",
+    "pywidevine>=1.9.0",
+    "requests>=2.32.5",
 ]
 
 [project.scripts]

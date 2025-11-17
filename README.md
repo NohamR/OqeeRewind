@@ -84,6 +84,8 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
 - [ ] Better output system
 - [ ] Verify mp4ff installation
 - [ ] CLI arguments implementation + documentation
+- [ ] Live direct restream support
+- [ ] EPG info support
 
 
 ## Libraries Used

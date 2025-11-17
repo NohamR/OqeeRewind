@@ -13,6 +13,7 @@ from utils.stream import (
 )
 
 SERVICE_PLAN_API_URL = "https://api.oqee.net/api/v6/service_plan"
+EPG_API_URL = "https://api.oqee.net/api/v1/epg/all/{unix}"
 
 class DatetimeValidator(Validator):
     """
