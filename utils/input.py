@@ -15,6 +15,7 @@ from utils.stream import (
 SERVICE_PLAN_API_URL = "https://api.oqee.net/api/v6/service_plan"
 EPG_API_URL = "https://api.oqee.net/api/v1/epg/all/{unix}"
 
+
 class DatetimeValidator(Validator):
     """
     Validateur personnalisé pour les chaînes datetime au format "YYYY-MM-DD HH:MM:SS".
@@ -27,6 +28,7 @@ class DatetimeValidator(Validator):
                 message="Veuillez entrer une date/heure valide au format YYYY-MM-DD HH:MM:SS",
                 cursor_position=len(document.text),
             ) from exc
+
 
 class DurationValidator(Validator):
     """
@@ -48,6 +50,8 @@ class DurationValidator(Validator):
                 message="Format invalide. Utilisez HH:MM:SS avec des nombres valides.",
                 cursor_position=len(document.text),
             ) from exc
+
+
 def get_date_input():
     """Prompt user for start and end date/time or duration.
 
@@ -113,7 +117,9 @@ def get_date_input():
 
         elif end_date_result.get("datetime"):
             try:
-                end_date = datetime.datetime.strptime(end_date_result["datetime"], "%Y-%m-%d %H:%M:%S")
+                end_date = datetime.datetime.strptime(
+                    end_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
+                )
                 print(f"\nDate/heure de fin : {end_date}")
             except (ValueError, TypeError):
                 print("Impossible d'analyser la chaîne de date/heure fournie.")
@@ -320,7 +326,146 @@ def stream_selection():
             break
 
     if final_selections:
+        final_selections['channel'] = selected_channel
         return final_selections
 
     print("\nAucun flux n'a été sélectionné.")
     return None
+
+
+def get_epg_data_at(dt: datetime.datetime):
+    """
+    Fetch EPG data from the Oqee API for the nearest aligned hour of a given datetime.
+    
+    Args:
+        dt (datetime.datetime): datetime输入 (with hour, minute, etc.)
+
+    Returns:
+        dict | None: EPG data or None on error
+    """
+
+    # Round to nearest hour
+    if dt.minute >= 30:
+        dt_aligned = (dt + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    else:
+        dt_aligned = dt.replace(minute=0, second=0, microsecond=0)
+
+    unix_time = int(dt_aligned.timestamp())
+    print(f"Fetching EPG for aligned time: {dt_aligned} (unix={unix_time})")
+
+    try:
+        response = requests.get(EPG_API_URL.format(unix=unix_time), timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        return data.get("result")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Une erreur réseau est survenue : {e}")
+        return None
+    except ValueError:
+        print("Erreur lors de l'analyse de la réponse JSON.")
+        return None
+
+
+def select_program_from_epg(programs, original_start_date, original_end_date):
+    """
+    Prompt user to select a program from EPG data or keep original selection.
+    
+    Args:
+        programs (list): List of program dictionaries from EPG data
+        original_start_date (datetime.datetime): User's original start date selection
+        original_end_date (datetime.datetime): User's original end date selection
+    
+    Returns:
+        dict: Dictionary containing:
+            - 'start_date': datetime object for start
+            - 'end_date': datetime object for end
+            - 'title': str or None (program title if selected)
+            - 'program': dict or None (full program data if selected)
+    """
+    if not programs:
+        print("Aucun programme disponible dans le guide EPG.")
+        return {
+            'start_date': original_start_date,
+            'end_date': original_end_date,
+            'title': None,
+            'program': None
+        }
+
+    # Create choices list with program information
+    program_choices = []
+    for program in programs:
+        # Extract the live data from the program
+        live_data = program.get("live", program)
+        title = live_data.get('title', 'Sans titre')
+        start_time = datetime.datetime.fromtimestamp(live_data.get('start', 0))
+        end_time = datetime.datetime.fromtimestamp(live_data.get('end', 0))
+        duration_min = (end_time - start_time).total_seconds() / 60
+
+        choice_name = (
+            f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')} | "
+            f"{title} ({int(duration_min)} min)"
+        )
+        program_choices.append({
+            "name": choice_name,
+            "value": program  # Store the full program object
+        })
+
+    # Add option to keep original selection
+    program_choices.insert(0, {
+        "name": (
+            f"Garder la sélection manuelle originale "
+            f"({original_start_date.strftime('%Y-%m-%d %H:%M:%S')} - "
+            f"{original_end_date.strftime('%Y-%m-%d %H:%M:%S')})"
+        ),
+        "value": None
+    })
+
+    questions = [
+        {
+            "type": "list",
+            "message": "Sélectionnez un programme ou gardez votre sélection manuelle :",
+            "choices": program_choices,
+            "long_instruction": "Utilisez les flèches pour naviguer, Entrée pour sélectionner.",
+        }
+    ]
+
+    try:
+        result = prompt(questions)
+        if not result:
+            return None
+
+        selected_program = result[0]
+
+        # If user chose to keep original selection
+        if selected_program is None:
+            print("\n✅ Sélection manuelle conservée")
+            return {
+                'start_date': original_start_date,
+                'end_date': original_end_date,
+                'title': None,
+                'program': None
+            }
+
+        # Extract live data and convert program timestamps to datetime objects
+        live_data = selected_program.get('live', selected_program)
+        program_start = datetime.datetime.fromtimestamp(live_data.get('start', 0))
+        program_end = datetime.datetime.fromtimestamp(live_data.get('end', 0))
+        program_title = live_data.get('title', 'Sans titre')
+
+        print("\n✅ Programme sélectionné :")
+        print(f"  - Titre : {program_title}")
+        print(f"  - Début : {program_start.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"  - Fin : {program_end.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        return {
+            'start_date': program_start,
+            'end_date': program_end,
+            'title': program_title,
+            'program': selected_program
+        }
+
+    except KeyboardInterrupt:
+        print("\nOpération annulée par l'utilisateur.")
+        return None
