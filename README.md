@@ -70,22 +70,23 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
 
 ## Todo
 - [x] Bruteforce implementation
+- [x] EPG info support
+- [x] License
 - [ ] Better README
     - [x] Lib used
     - [x] How to use
     - [x] Lib to install (pip + mp4ff + ffmpeg) 
     - [ ] Demo GIF
-- [x] License
 - [ ] Lint code
-- [ ] Full implementation
-- [ ] French/English full translation
-- [ ] Add more comments in the code
 - [ ] Oqee widevine license implementation (.wvd) + mention README
-- [ ] Better output system
+- [ ] Full implementation
 - [ ] Verify mp4ff installation
 - [ ] CLI arguments implementation + documentation
+- [ ] French/English full translation
+- [ ] Better output system
+- [ ] Add more comments in the code
+- [ ] Logging system
 - [ ] Live direct restream support
-- [ ] EPG info support
 
 
 ## Libraries Used
