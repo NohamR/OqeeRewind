@@ -354,9 +354,10 @@ def get_manifest(manifest_id):
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
     }
 
+    format_id = 1
     url = (
         f'https://api-proxad.dc2.oqee.net/playlist/v1/live/'
-        f'{manifest_id}/1/live.mpd'
+        f'{manifest_id}/{format_id}/live.mpd'
     )
     response = requests.get(url, headers=headers, timeout=10)
     return response.text
