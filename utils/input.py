@@ -338,7 +338,7 @@ def get_epg_data_at(dt: datetime.datetime):
     Fetch EPG data from the Oqee API for the nearest aligned hour of a given datetime.
     
     Args:
-        dt (datetime.datetime): datetime输入 (with hour, minute, etc.)
+        dt (datetime.datetime): datetime (with hour, minute, etc.)
 
     Returns:
         dict | None: EPG data or None on error
