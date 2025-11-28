@@ -24,10 +24,10 @@ if __name__ == '__main__':
     # with open('manifest_organized.json', 'w') as f:
     #     json.dump(organized_info, f, indent=4)
 
-    drm_kid = "0dfa399a-425d-3095-0255-f357e2407edf"
-    drm_kid = drm_kid.replace("-", "")
-    print('kid: ', drm_kid)
-    print(fetch_drm_keys(drm_kid))
+    # drm_kid = "0dfa399a-425d-3095-0255-f357e2407edf"
+    # drm_kid = drm_kid.replace("-", "")
+    # print('kid: ', drm_kid)
+    # print(fetch_drm_keys(drm_kid))
 
 
     # dt = datetime.datetime.strptime("2023-12-14 23:02:14", "%Y-%m-%d %H:%M:%S")
