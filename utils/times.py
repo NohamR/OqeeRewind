@@ -90,6 +90,13 @@ async def bruteforce(track_id, date):
             # print(f"💾 Progress saved to {PROGRESS_FILE}")
             print(f"{'='*50}")
         if valid_ticks:
+            checked_ticks.update(list(ticks_to_check))
+            end_time = time.time()
+            elapsed = end_time - start_time
+            req_per_sec = len(ticks_to_check) / elapsed if elapsed > 0 else 0
+            print(f"✅ Completed in {elapsed:.2f}s")
+            print(f"⚡ Speed: {req_per_sec:.2f} req/s")
+            print(f"📊 Total checked: {len(checked_ticks)}/{total_requests}")
             print("Ticks valides :", valid_ticks)
             # break from the for loop if valid ticks found
             break

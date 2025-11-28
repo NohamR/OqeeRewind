@@ -1,4 +1,5 @@
 """Script for testing and analyzing past Oqee streams and manifests."""
+import asyncio
 import datetime
 
 from dotenv import load_dotenv
@@ -6,7 +7,8 @@ from dotenv import load_dotenv
 from utils.stream import fetch_drm_keys
 from utils.times import (
     convert_date_to_sec,
-    convert_sec_to_ticks
+    convert_sec_to_ticks,
+    bruteforce
 )
 
 TIMESCALE = 90000
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     audio_base2 = 153232896097804
 
 
-    # asyncio.run(bruteforce(track_id, tick))
+    asyncio.run(bruteforce(audio_track_id, tick))
 
 
     # # https://catalogue.ina.fr/doc/TV-RADIO/TV_8165000.001/Bordeaux_%2Bchampagne%2B_%2Bquand%2Bles%2Bescrocs%2Bs_attaquent%2Ba%2Bnos%2Bbouteilles%2B_
