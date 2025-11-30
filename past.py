@@ -31,9 +31,9 @@ if __name__ == '__main__':
 
 
     # dt = datetime.datetime.strptime("2023-12-14 23:02:14", "%Y-%m-%d %H:%M:%S")
-    dt = datetime.datetime.strptime("2025-11-13 23:02:14", "%Y-%m-%d %H:%M:%S")
+    dt = datetime.datetime.strptime("2024-01-11 22:45:01", "%Y-%m-%d %H:%M:%S")
     tick = int(convert_sec_to_ticks(convert_date_to_sec(dt), TIMESCALE))
-    # print(tick)
+    print(tick)
 
     # # 1280x720, 3000
     # track_id = "0_1_390"
@@ -43,16 +43,19 @@ if __name__ == '__main__':
     # track_id = "0_1_3525"
     # # not found
 
-    # # 1920x1080, 4800
-    video_track_id = "0_1_3524"
-    video_base1 = 153232896150968
+    # # # 1920x1080, 4800
+    # video_track_id = "0_1_3524"
+    # video_base1 = 153232896150968
 
-    # audio fra_main
-    audio_track_id = "0_1_384"
-    audio_base2 = 153232896097804
+    # # audio fra_main
+    # audio_track_id = "0_1_384"
+    # audio_base2 = 153232896097804
+
+    # # 1920x1080, 4800 France 2
+    video_track_id = "0_1_3566"
 
 
-    asyncio.run(bruteforce(audio_track_id, tick))
+    asyncio.run(bruteforce(video_track_id, tick))
 
 
     # # https://catalogue.ina.fr/doc/TV-RADIO/TV_8165000.001/Bordeaux_%2Bchampagne%2B_%2Bquand%2Bles%2Bescrocs%2Bs_attaquent%2Ba%2Bnos%2Bbouteilles%2B_

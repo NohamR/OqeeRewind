@@ -383,12 +383,9 @@ async def fetch_segment(session, ticks, track_id):
     try:
         async with session.get(url, headers=headers) as resp:
             if resp.status == 200:
-                print(f"✅ {ticks} → 200 OK")
                 return ticks
-            print(f"❌ {ticks} → {resp.status}")
             return None
-    except aiohttp.ClientError as e:
-        print(f"⚠️ {ticks} → {e}")
+    except aiohttp.ClientError:
         return None
 
 def get_init(track_id):

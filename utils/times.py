@@ -4,6 +4,7 @@ import datetime
 import time
 
 import aiohttp
+from tqdm import tqdm
 
 from utils.stream import fetch_segment
 
@@ -49,57 +50,61 @@ def future(rep, base, duration):
 async def bruteforce(track_id, date):
     """Bruteforce segments to find valid ticks."""
     valid_ticks = []
-
     total_requests = 288000
-    pas = 20000
-
-    for i in range(total_requests // pas):
-        debut = pas * i
-        fin = debut + pas
-
-        segment_num = i + 1
-        total_segments = total_requests // pas
-        print(f"\n🚀 Starting bruteforce segment {segment_num}/{total_segments} "
-              f"(ticks {debut} to {fin})...")
-
-        checked_ticks = set()
-        ticks_to_check = list(range(debut, fin))
-        start_time = time.time()
-        try:
-            async with aiohttp.ClientSession() as session:
-                tasks = [fetch_segment(session, t+date, track_id) for t in ticks_to_check]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+    batch_size = 20000
+    checked_count = 0
+    
+    print(f"\n🚀 Starting bruteforce...")
+    print(f"📦 Track ID: {track_id}")
+    print(f"🎯 Total ticks to check: {total_requests}")
+    print(f"{'='*50}\n")
+    
+    start_time = time.time()
+    
+    total_batches = (total_requests + batch_size - 1) // batch_size
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            for batch_num, batch_start in enumerate(range(0, total_requests, batch_size), 1):
+                batch_end = min(batch_start + batch_size, total_requests)
+                ticks_to_check = list(range(batch_start, batch_end))
+                
+                print(f"\n📦 Batch {batch_num}/{total_batches} (ticks {batch_start} to {batch_end})")
+                
+                tasks = [fetch_segment(session, t + date, track_id) for t in ticks_to_check]
+                
+                results = []
+                for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), 
+                                 desc=f"Batch {batch_num}", unit="req"):
+                    result = await coro
+                    results.append(result)
+                
                 new_valid = [r for r in results if r and not isinstance(r, Exception)]
                 valid_ticks.extend(new_valid)
-
-                # Mark all checked ticks
-                checked_ticks.update(ticks_to_check)
-        except KeyboardInterrupt:
-            print("\n\n🛑 Interrupted by user (Ctrl+C)")
-            # Save progress even if interrupted
-            checked_ticks.update(list(ticks_to_check))  # Mark attempted as checked
-            end_time = time.time()
-            elapsed = end_time - start_time
-            req_per_sec = len(ticks_to_check) / elapsed if elapsed > 0 else 0
-
-            print(f"\n{'='*50}")
-            print(f"✅ Completed in {elapsed:.2f}s")
-            print(f"⚡ Speed: {req_per_sec:.2f} req/s")
-            print(f"📊 Total checked: {len(checked_ticks)}/{total_requests}")
-            print(f"🎯 Valid ticks found: {len(valid_ticks)}")
-            # print(f"💾 Progress saved to {PROGRESS_FILE}")
-            print(f"{'='*50}")
-        if valid_ticks:
-            checked_ticks.update(list(ticks_to_check))
-            end_time = time.time()
-            elapsed = end_time - start_time
-            req_per_sec = len(ticks_to_check) / elapsed if elapsed > 0 else 0
-            print(f"✅ Completed in {elapsed:.2f}s")
-            print(f"⚡ Speed: {req_per_sec:.2f} req/s")
-            print(f"📊 Total checked: {len(checked_ticks)}/{total_requests}")
-            print("Ticks valides :", valid_ticks)
-            # break from the for loop if valid ticks found
-            break
+                
+                checked_count += len(ticks_to_check)
+                
+                # Stop if we found valid ticks
+                if valid_ticks:
+                    print(f"\n✅ Found {len(valid_ticks)} valid tick(s)!")
+                    break
+                        
+    except KeyboardInterrupt:
+        print("\n\n🛑 Interrupted by user (Ctrl+C)")
+    
+    end_time = time.time()
+    elapsed = end_time - start_time
+    req_per_sec = checked_count / elapsed if elapsed > 0 else 0
+    
+    print(f"\n{'='*50}")
+    print(f"✅ Completed in {elapsed:.2f}s")
+    print(f"⚡ Speed: {req_per_sec:.2f} req/s")
+    print(f"📊 Total checked: {checked_count}/{total_requests}")
+    if valid_ticks:
+        print(f"📍 Valid ticks: {valid_ticks}")
+    print(f"{'='*50}")
+    
+    return valid_ticks
 
 
 def find_nearest_tick_by_hour(base_tick, datetime_str, timescale, duration, offset_hours=1):
