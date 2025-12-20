@@ -1,3 +1,18 @@
+<p align="center">
+    <img src="docs/images/logo.png" width="64"> <a href="https://github.com/NohamR/OqeeRewind">OqeeRewind</a>
+    <br/>
+    <sup><em>Oqee TV Live Downloader</em></sup>
+</p>
+
+<p align="center">
+    <a href="https://github.com/NohamR/OqeeRewind/blob/master/LICENSE">
+        <img src="https://img.shields.io/:license-MIT-blue.svg" alt="License">
+    </a>
+    <a href="https://github.com/astral-sh/uv">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Onyx-Nostalgia/uv/refs/heads/fix/logo-badge/assets/badge/v0.json" alt="Manager: uv">
+    </a>
+</p>
+
 # OqeeRewind - Oqee TV Live Downloader
 
 ## Legal Warning
@@ -8,10 +23,10 @@ This application is not endorsed by or affiliated with Oqee. This application en
 
 ### Prerequisites
 - Python 3.9+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- [uv](https://docs.astral.sh/uv/)
 - Go ([Installation Guide](https://go.dev/doc/install))
 - ffmpeg
-- mp4ff-decrypt
+- [mp4ff-decrypt](https://github.com/Eyevinn/mp4ff)
 ```bash
 go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ```
@@ -19,16 +34,9 @@ go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ### Steps
 Clone the repository and install dependencies:
 
-**Using uv (recommended - faster):**
 ```bash
 git clone https://github.com/NohamR/OqeeRewind && cd OqeeRewind
 uv sync
-```
-
-**Using pip:**
-```bash
-git clone https://github.com/NohamR/OqeeRewind && cd OqeeRewind
-pip install -r requirements.txt
 ```
 
 ### Configuration
@@ -53,11 +61,6 @@ If you run the script without arguments, it will guide you through channel selec
 **Using uv:**
 ```bash
 uv run main.py
-```
-
-**Using Python directly:**
-```bash
-python main.py
 ```
 
 ### CLI Mode
