@@ -160,7 +160,7 @@ if __name__ == "__main__":
             # Get stream selections
             selections = get_selection(args.channel_id, args.video, args.audio)
             if not selections:
-                print("Erreur lors de la sélection des flux.")
+                print("Error during stream selection.")
                 sys.exit(1)
 
             print(f"Start date: {start_date}")
@@ -385,7 +385,7 @@ if __name__ == "__main__":
         shutil.rmtree(f"{output_dir}/segments_{audio_data['track_id']}")
 
     except KeyboardInterrupt:
-        print("\n\nProgramme interrompu par l'utilisateur. Au revoir !")
+        print("\n\nProgram interrupted by user. Goodbye!")
 
 
 # uv run python main.py --start-date "2025-01-01 12:00:00" --duration "01:00:00" \
