@@ -1,7 +1,11 @@
 """Main module for Oqee channel selection and stream management."""
 
 import os
+import sys
 import argparse
+import asyncio
+import subprocess
+import shutil
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from utils.input import (
@@ -23,15 +27,10 @@ from utils.times import (
     bruteforce,
 )
 from utils.stream import save_segments, get_kid, get_init
-import asyncio
-import subprocess
-import shutil
 
 load_dotenv()
 TIMESCALE = 90000
 DURATION = 288000
-
-from pprint import pprint
 
 
 def parse_arguments():
@@ -122,17 +121,17 @@ if __name__ == "__main__":
                     start_date = datetime.strptime(args.start_date, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     print("Invalid start-date format. Use YYYY-MM-DD HH:MM:SS")
-                    exit(1)
+                    sys.exit(1)
 
             if args.end_date and args.duration:
                 print("Cannot specify both --end-date and --duration")
-                exit(1)
+                sys.exit(1)
             elif args.end_date:
                 try:
                     end_date = datetime.strptime(args.end_date, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     print("Invalid end-date format. Use YYYY-MM-DD HH:MM:SS")
-                    exit(1)
+                    sys.exit(1)
             elif args.duration and start_date:
                 # Parse duration HH:MM:SS
                 try:
@@ -141,28 +140,28 @@ if __name__ == "__main__":
                     end_date = start_date + duration_td
                 except ValueError:
                     print("Invalid duration format. Use HH:MM:SS")
-                    exit(1)
+                    sys.exit(1)
 
             if not start_date:
                 print("start-date is required in CLI mode")
-                exit(1)
+                sys.exit(1)
             if not end_date:
                 print("Either end-date or duration is required in CLI mode")
-                exit(1)
+                sys.exit(1)
 
             keys = args.key or []
-            # end = ".".join([args.video, args.audio]) if args.video and args.audio else ""
-            end = ""
+            # END_SUFFIX = ".".join([args.video, args.audio]) if args.video and args.audio else ""
+            END_SUFFIX = ""
             title = (
-                args.title + end
-                or f"{args.channel_id}_{start_date.strftime('%Y%m%d_%H%M%S') + end}"
+                args.title + END_SUFFIX
+                or f"{args.channel_id}_{start_date.strftime('%Y%m%d_%H%M%S') + END_SUFFIX}"
             )
 
             # Get stream selections
             selections = get_selection(args.channel_id, args.video, args.audio)
             if not selections:
                 print("Erreur lors de la sélection des flux.")
-                exit(1)
+                sys.exit(1)
 
             print(f"Start date: {start_date}")
             print(f"End date: {end_date}")
@@ -196,33 +195,54 @@ if __name__ == "__main__":
 
             title = title or f"{freebox_id}_{start_date.strftime('%Y%m%d_%H%M%S')}"
             keys = []
-        
-        output_dir = os.getenv("OUTPUT_DIR") or (args.output_dir if cli_mode else "./download")
 
-        start_tick_user = int(convert_sec_to_ticks(convert_date_to_sec(start_date), TIMESCALE))
+        output_dir = os.getenv("OUTPUT_DIR") or (
+            args.output_dir if cli_mode else "./download"
+        )
+
+        start_tick_user = int(
+            convert_sec_to_ticks(convert_date_to_sec(start_date), TIMESCALE)
+        )
 
         video_data = None
         audio_data = None
 
-        for content_type, sel in [("video", selections["video"]),("audio", selections["audio"]),]:
+        for content_type, sel in [
+            ("video", selections["video"]),
+            ("audio", selections["audio"]),
+        ]:
             start_tick_manifest = sel["segments"]["timeline"][0]["t"]
-            manifest_date = convert_sec_to_date(convert_ticks_to_sec(start_tick_manifest, TIMESCALE))
+            manifest_date = convert_sec_to_date(
+                convert_ticks_to_sec(start_tick_manifest, TIMESCALE)
+            )
             init_segment = sel["segments"]["initialization"]
             track_id = init_segment.split("/")[-1].split("_init")[0]
 
             if start_date.date() == manifest_date.date():
-                print("Date match between requested start date and manifest data, proceeding with download...")
+                print(
+                    "Date match between requested start date and manifest data, proceeding with download..."
+                )
 
-                start_tick, start_rep = find_nearest_tick_by_hour(start_tick_manifest, start_date, TIMESCALE, DURATION)
-                end_tick, end_rep = find_nearest_tick_by_hour(start_tick_manifest, end_date, TIMESCALE, DURATION)
+                start_tick, start_rep = find_nearest_tick_by_hour(
+                    start_tick_manifest, start_date, TIMESCALE, DURATION
+                )
+                end_tick, end_rep = find_nearest_tick_by_hour(
+                    start_tick_manifest, end_date, TIMESCALE, DURATION
+                )
             else:
-                print("Date mismatch between requested start date and manifest data, bruteforce method is needed.")
+                print(
+                    "Date mismatch between requested start date and manifest data, bruteforce method is needed."
+                )
 
                 valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user))
                 valid_tick = valid_ticks[0]
 
-                start_tick, start_rep = find_nearest_tick_by_hour(valid_tick, start_date, TIMESCALE, DURATION)
-                end_tick, end_rep = find_nearest_tick_by_hour(valid_tick, end_date, TIMESCALE, DURATION)
+                start_tick, start_rep = find_nearest_tick_by_hour(
+                    valid_tick, start_date, TIMESCALE, DURATION
+                )
+                end_tick, end_rep = find_nearest_tick_by_hour(
+                    valid_tick, end_date, TIMESCALE, DURATION
+                )
 
             rep_nb = (end_tick - start_tick) // DURATION + 1
             print(f"Total segments to fetch for {content_type}: {rep_nb}")
@@ -243,14 +263,20 @@ if __name__ == "__main__":
             track_id = data["track_id"]
             start_tick = data["start_tick"]
             rep_nb = data["rep_nb"]
-            asyncio.run(save_segments(output_dir, track_id, start_tick, rep_nb, DURATION))
+            asyncio.run(
+                save_segments(output_dir, track_id, start_tick, rep_nb, DURATION)
+            )
 
             # Merge video and audio
             video_file = f"{output_dir}/temp_video.mp4"
             audio_file = f"{output_dir}/temp_audio.mp4"
 
             data["file"] = video_file if content_type == "video" else audio_file
-            merge_segments(output_dir, track_id, video_file if content_type == "video" else audio_file)
+            merge_segments(
+                output_dir,
+                track_id,
+                video_file if content_type == "video" else audio_file,
+            )
 
             kid = get_kid(output_dir, track_id)
             data["kid"] = kid
@@ -265,12 +291,10 @@ if __name__ == "__main__":
 
         if len(missing_keys) > 0:
             method = {}
-            # api_url = os.getenv("API_URL")
-            # api_key = os.getenv("API_KEY")
-            api_url = None
-            api_key = None
-            if api_url and api_key:
-                method = {"method": "api", "api_url": api_url, "api_key": api_key}
+            API_URL = os.getenv("API_URL") or None
+            API_KEY = os.getenv("API_KEY") or None
+            if API_URL and API_KEY:
+                method = {"method": "api", "api_url": API_URL, "api_key": API_KEY}
             else:
                 username = args.username or os.getenv("OQEE_USERNAME")
                 password = args.password or os.getenv("OQEE_PASSWORD")
@@ -295,7 +319,7 @@ if __name__ == "__main__":
                 if k.split(":")[0] == kid:
                     key = k
                     break
-            
+
             init_path = get_init(output_dir, track_id)
             dec_file = f"{output_dir}/dec_{content_type}.mp4"
             decrypt(file, init_path, dec_file, key)
@@ -306,33 +330,50 @@ if __name__ == "__main__":
         start_tick_audio = audio_data["start_tick"]
         diff_start = start_tick_video - start_tick_audio
         diff_start_sec = convert_ticks_to_sec(diff_start, TIMESCALE)
-        
+
         # ffmpeg -i "concat:init.mp4|merged_dec.m4s" -c copy output.mp4
         command_ffmpeg = (
             f'ffmpeg -i "concat:{output_dir}/segments_{track_id_video}/init.mp4|'
             f'{output_dir}/dec_video.mp4" -c copy {output_dir}/video.mp4'
         )
         print("FFmpeg command:", command_ffmpeg)
-        subprocess.run(command_ffmpeg, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            command_ffmpeg,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
         command_ffmpeg = (
             f'ffmpeg -i "concat:{output_dir}/segments_{track_id_audio}/init.mp4|'
             f'{output_dir}/dec_audio.mp4" -c copy {output_dir}/audio.mp4'
         )
 
         print("FFmpeg command:", command_ffmpeg)
-        subprocess.run(command_ffmpeg, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            command_ffmpeg,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
 
-        command_merge = (
+        COMMAND_MERGE = (
             f"ffmpeg -i {output_dir}/video.mp4 -itsoffset {diff_start_sec} "
             f"-i {output_dir}/audio.mp4 -c copy -map 0:v -map 1:a {output_dir}/output.mp4"
         )
-        print("Merge command:", command_merge)
-        subprocess.run(command_merge, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("Merge command:", COMMAND_MERGE)
+        subprocess.run(
+            COMMAND_MERGE,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
 
-            
-        final_output = f"{output_dir}/{title}.mp4"
-        shutil.move(f"{output_dir}/output.mp4", final_output)
-        print(f"Final output saved to {final_output}")
+        FINAL_OUTPUT = f"{output_dir}/{title}.mp4"
+        shutil.move(f"{output_dir}/output.mp4", FINAL_OUTPUT)
+        print(f"Final output saved to {FINAL_OUTPUT}")
 
         os.remove(f"{output_dir}/dec_video.mp4")
         os.remove(f"{output_dir}/dec_audio.mp4")
@@ -343,10 +384,15 @@ if __name__ == "__main__":
         shutil.rmtree(f"{output_dir}/segments_{video_data['track_id']}")
         shutil.rmtree(f"{output_dir}/segments_{audio_data['track_id']}")
 
-
     except KeyboardInterrupt:
         print("\n\nProgramme interrompu par l'utilisateur. Au revoir !")
 
 
-# uv run python main.py --start-date "2025-01-01 12:00:00" --duration "01:00:00" --channel-id 536 --video "720+best" --audio best --title "Test" --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb
-# uv run python main.py --start-date "2025-12-19 12:00:00" --duration "00:01:00" --channel-id 536 --video "720+best" --audio best --title "Test" --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb
+# uv run python main.py --start-date "2025-01-01 12:00:00" --duration "01:00:00" \
+# --channel-id 536 --video "720+best" --audio best --title "Test" \
+# --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 \
+# --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb
+# uv run python main.py --start-date "2025-12-19 12:00:00" --duration "00:01:00" \
+# --channel-id 536 --video "720+best" --audio best --title "Test" \
+# --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 \
+# --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb

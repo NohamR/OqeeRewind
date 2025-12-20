@@ -1,3 +1,5 @@
+"""Utility functions for OqeeRewind, including verification, merging, and decryption."""
+
 import os
 import sys
 import logging
@@ -18,10 +20,10 @@ def verify_mp4ff():
 def verify_cmd(path: str) -> bool:
     """Verify if the file provided at path is valid and exists, otherwise log error and exit."""
     if not os.path.exists(path):
-        logging.error(f"File does not exist: {path}")
+        logging.error("File does not exist: %s", path)
         sys.exit(1)
     if not os.path.isfile(path):
-        logging.error(f"Path is not a file: {path}")
+        logging.error("Path is not a file: %s", path)
         sys.exit(1)
     return True
 
@@ -55,13 +57,13 @@ def decrypt(input_file, init_path, output_file, key):
     """
     key = key.split(":")[1]
     result = subprocess.run(
-        ['mp4ff-decrypt', '-init', init_path, '-key', key, input_file, output_file],
+        ["mp4ff-decrypt", "-init", init_path, "-key", key, input_file, output_file],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
     if result.returncode == 0:
         print(f"✅ Decrypted {input_file} to {output_file}")
         return True
-    else:
-        print(f"❌ Decryption failed: {result.stderr}")
-        return False
+    print(f"❌ Decryption failed: {result.stderr}")
+    return False

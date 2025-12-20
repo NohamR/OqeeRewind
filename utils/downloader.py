@@ -1,7 +1,6 @@
-import os
-import base64
-import requests
+"""Module for fetching DRM keys and generating PSSH boxes."""
 from uuid import UUID
+import requests
 from pywidevine.cdm import Cdm
 from pywidevine.device import Device
 from pywidevine.pssh import PSSH
@@ -14,13 +13,11 @@ def fetch_drm_keys(kid: str, api_url: str, api_key: str) -> str:
     Returns: The DRM key as a string.
     """
     headers = {
-        'Content-Type': 'application/json',
-        'Api-Key': api_key,
+        "Content-Type": "application/json",
+        "Api-Key": api_key,
     }
     data = {"service": "oqee", "kid": kid}
-    response = requests.post(
-        api_url, headers=headers, json=data, timeout=10
-    )
+    response = requests.post(api_url, headers=headers, json=data, timeout=10)
     return response.json()["key"]
 
 
@@ -42,31 +39,31 @@ def generate_pssh(kids: list[str]) -> PSSH:
 
 def get_keys(kids: list[str], method: dict) -> list[str]:
     """Retrieve DRM keys using the specified method."""
-    if method["method"] == 'api':
+    if method["method"] == "api":
         print("Fetching DRM keys via API...")
         keys = []
         for kid in kids:
             key = fetch_drm_keys(kid, method["api_url"], method["api_key"])
             keys.append(f"{kid}:{key}")
         return keys
-    else:
-        print("Fetching DRM keys via Widevine CDM...")
-        client = method["client_class"]
 
-        device = Device.load(method["device_file"])
-        cdm = Cdm.from_device(device)
-        session_id = cdm.open()
-        certificate = client.certificate()
-        cdm.set_service_certificate(session_id, certificate)
+    print("Fetching DRM keys via Widevine CDM...")
+    client = method["client_class"]
 
-        pssh_data = generate_pssh(kids)
-        challenge = cdm.get_license_challenge(session_id, pssh_data, privacy_mode=True)
-        license_data = client.license(challenge)
+    device = Device.load(method["device_file"])
+    cdm = Cdm.from_device(device)
+    session_id = cdm.open()
+    certificate = client.certificate()
+    cdm.set_service_certificate(session_id, certificate)
 
-        cdm.parse_license(session_id, license_data)
-        keys = []
-        for key in cdm.get_keys(session_id):
-            if key.type=='CONTENT':
-                keys.append(f"{key.kid.hex}:{key.key.hex()}")
-        cdm.close(session_id)
-        return keys
+    pssh_data = generate_pssh(kids)
+    challenge = cdm.get_license_challenge(session_id, pssh_data, privacy_mode=True)
+    license_data = client.license(challenge)
+
+    cdm.parse_license(session_id, license_data)
+    keys = []
+    for key in cdm.get_keys(session_id):
+        if key.type == "CONTENT":
+            keys.append(f"{key.kid.hex}:{key.key.hex()}")
+    cdm.close(session_id)
+    return keys

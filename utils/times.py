@@ -1,4 +1,5 @@
 """Utility functions for time and tick conversions, and bruteforce operations."""
+
 import asyncio
 import datetime
 import time
@@ -21,7 +22,9 @@ def convert_sec_to_ticks(seconds, timescale):
 
 def convert_sec_to_date(seconds, offset_hours=1):
     """Convert seconds to datetime with offset."""
-    dt = datetime.datetime.utcfromtimestamp(seconds) + datetime.timedelta(hours=offset_hours)
+    dt = datetime.datetime.utcfromtimestamp(seconds) + datetime.timedelta(
+        hours=offset_hours
+    )
     return dt
 
 
@@ -52,61 +55,56 @@ async def bruteforce(track_id, date):
     valid_ticks = []
     total_requests = 288000
     batch_size = 20000
-    checked_count = 0
-    
+
     print(f"Starting bruteforce for {track_id}")
-    # print(f"🎯 Total ticks to check: {total_requests}")
     print(f"{'='*50}")
-    
+
     start_time = time.time()
-    
-    total_batches = (total_requests + batch_size - 1) // batch_size
-    
+
     try:
         async with aiohttp.ClientSession() as session:
-            for batch_num, batch_start in enumerate(range(0, total_requests, batch_size), 1):
+            for batch_start in range(0, total_requests, batch_size):
                 batch_end = min(batch_start + batch_size, total_requests)
-                ticks_to_check = list(range(batch_start, batch_end))
-                
-                # print(f"\n📦 Batch {batch_num}/{total_batches} (ticks {batch_start} to {batch_end})")
-                
-                tasks = [fetch_segment(session, t + date, track_id) for t in ticks_to_check]
-                
+                tasks = [
+                    fetch_segment(session, t + date, track_id)
+                    for t in range(batch_start, batch_end)
+                ]
+
                 results = []
-                for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), 
-                                 desc=f"Batch {batch_num}", unit="req"):
+                for coro in tqdm(
+                    asyncio.as_completed(tasks),
+                    total=len(tasks),
+                    desc="Bruteforce",
+                    unit="req",
+                ):
                     result = await coro
                     results.append(result)
-                
-                new_valid = [r for r in results if r and not isinstance(r, Exception)]
-                valid_ticks.extend(new_valid)
-                
-                checked_count += len(ticks_to_check)
-                
+
+                valid_ticks.extend(
+                    [r for r in results if r and not isinstance(r, Exception)]
+                )
+
                 # Stop if we found valid ticks
                 if valid_ticks:
                     print(f"Found valid ticks: {valid_ticks}, stopping bruteforce.")
                     break
-                        
+
     except KeyboardInterrupt:
         print("\n\n🛑 Interrupted by user (Ctrl+C)")
-    
-    end_time = time.time()
-    elapsed = end_time - start_time
-    req_per_sec = checked_count / elapsed if elapsed > 0 else 0
-    
+
+    elapsed = time.time() - start_time
     print(f"\n{'='*50}")
     print(f"✅ Completed in {elapsed:.2f}s")
-    print(f"⚡ Speed: {req_per_sec:.2f} req/s")
-    print(f"📊 Total checked: {checked_count}/{total_requests}")
+    print(f"⚡ Speed: {total_requests / elapsed if elapsed > 0 else 0:.2f} req/s")
+    print(f"📊 Total checked: {total_requests}")
     print(f"{'='*50}")
-    
+
     return valid_ticks
 
 
-def find_nearest_tick_by_hour(base_tick, datetime, timescale, duration, offset_hours=1):
+def find_nearest_tick_by_hour(base_tick, dt, timescale, duration, offset_hours=1):
     """Find the nearest tick for a given datetime."""
-    target_ticks = convert_date_to_ticks(datetime, timescale, offset_hours)
+    target_ticks = convert_date_to_ticks(dt, timescale, offset_hours)
     diff_ticks = base_tick - target_ticks
     rep_estimate = diff_ticks / duration
 
@@ -120,14 +118,8 @@ def find_nearest_tick_by_hour(base_tick, datetime, timescale, duration, offset_h
         rep = int(round(rep_estimate))
         nearest_tick = base_tick - rep * duration
 
-    nearest_seconds = convert_ticks_to_sec(nearest_tick, timescale)
-    target_seconds = convert_ticks_to_sec(target_ticks, timescale)
-    delta_seconds = abs(nearest_seconds - target_seconds)
-
-    # print(f"Requested datetime: {datetime} (offset +{offset_hours}h)")
+    # print(f"Requested datetime: {dt} (offset +{offset_hours}h)")
     # print(f"Nearest rep: {rep}")
     # print(f"Tick: {nearest_tick}")
-    # print(f"Date: {convert_sec_to_date(nearest_seconds, offset_hours)}")
-    # print(f"Difference: {delta_seconds:.2f} seconds")
 
     return nearest_tick, rep

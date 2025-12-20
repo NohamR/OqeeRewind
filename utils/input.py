@@ -1,4 +1,5 @@
 """Input utilities for user prompts and channel/stream selection."""
+
 import datetime
 import requests
 from prompt_toolkit.validation import Validator, ValidationError
@@ -6,11 +7,7 @@ from InquirerPy import prompt
 from InquirerPy.validator import EmptyInputValidator
 from InquirerPy.base.control import Choice
 
-from utils.stream import (
-    get_manifest,
-    parse_mpd_manifest,
-    organize_by_content_type
-)
+from utils.stream import get_manifest, parse_mpd_manifest, organize_by_content_type
 
 SERVICE_PLAN_API_URL = "https://api.oqee.net/api/v6/service_plan"
 EPG_API_URL = "https://api.oqee.net/api/v1/epg/all/{unix}"
@@ -20,6 +17,7 @@ class DatetimeValidator(Validator):
     """
     Validateur personnalisé pour les chaînes datetime au format "YYYY-MM-DD HH:MM:SS".
     """
+
     def validate(self, document):
         try:
             datetime.datetime.strptime(document.text, "%Y-%m-%d %H:%M:%S")
@@ -34,8 +32,9 @@ class DurationValidator(Validator):
     """
     Validateur personnalisé pour les chaînes de durée au format "HH:MM:SS".
     """
+
     def validate(self, document):
-        parts = document.text.split(':')
+        parts = document.text.split(":")
         if len(parts) != 3:
             raise ValidationError(
                 message="Veuillez entrer la durée au format HH:MM:SS",
@@ -44,7 +43,9 @@ class DurationValidator(Validator):
         try:
             _, m, s = [int(part) for part in parts]
             if not (0 <= m < 60 and 0 <= s < 60):
-                raise ValueError("Les minutes et les secondes doivent être entre 0 et 59.")
+                raise ValueError(
+                    "Les minutes et les secondes doivent être entre 0 et 59."
+                )
         except ValueError as exc:
             raise ValidationError(
                 message="Format invalide. Utilisez HH:MM:SS avec des nombres valides.",
@@ -71,7 +72,9 @@ def get_date_input():
 
     start_date_result = prompt(question_start_date)
     if start_date_result:
-        start_date = datetime.datetime.strptime(start_date_result["datetime"], "%Y-%m-%d %H:%M:%S")
+        start_date = datetime.datetime.strptime(
+            start_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
+        )
         print(f"Date/heure de début : {start_date}")
 
     question_end_date = [
@@ -94,7 +97,8 @@ def get_date_input():
             "message": "Entrez une date/heure de fin (YYYY-MM-DD HH:MM:SS):",
             "name": "datetime",
             "default": (
-                start_date_result["datetime"] if start_date_result
+                start_date_result["datetime"]
+                if start_date_result
                 else "2025-01-01 12:00:00"
             ),
             "validate": DatetimeValidator(),
@@ -108,7 +112,7 @@ def get_date_input():
         if end_date_result.get("duration"):
             duration_str = end_date_result["duration"]
             try:
-                h, m, s = map(int, duration_str.split(':'))
+                h, m, s = map(int, duration_str.split(":"))
                 duration_td = datetime.timedelta(hours=h, minutes=m, seconds=s)
                 end_date = start_date + duration_td
                 print(f"\nDate/heure de fin : {end_date}")
@@ -144,13 +148,10 @@ def select_oqee_channel():
 
         channels_data = data["result"]["channels"]
         choices = [
-            {
-                "name": f"{channel_info.get('name', 'Nom inconnu')}",
-                "value": channel_id
-            }
+            {"name": f"{channel_info.get('name', 'Nom inconnu')}", "value": channel_id}
             for channel_id, channel_info in channels_data.items()
         ]
-        choices.sort(key=lambda x: x['name'])
+        choices.sort(key=lambda x: x["name"])
 
     except requests.exceptions.RequestException as e:
         print(f"Une erreur réseau est survenue : {e}")
@@ -204,7 +205,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
             {
                 "type": "list",
                 "message": "Quel type de flux souhaitez-vous sélectionner ?",
-                "choices": content_type_choices
+                "choices": content_type_choices,
             }
         ]
         result = prompt(questions)
@@ -218,7 +219,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
             {
                 "type": "list",
                 "message": f"Choisissez une qualité pour '{selected_type}':",
-                "choices": list(selected_content_data.keys())
+                "choices": list(selected_content_data.keys()),
             }
         ]
         result = prompt(questions)
@@ -239,7 +240,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
                         f"Bitrate: {s.get('bitrate_kbps')} kbps | "
                         f"Codec: {s.get('codec', 'N/A')} | ID: {s.get('track_id')}"
                     ),
-                    "value": s
+                    "value": s,
                 }
                 for s in available_streams
             ]
@@ -247,7 +248,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
                 {
                     "type": "list",
                     "message": "Plusieurs flux sont disponibles, choisissez-en un :",
-                    "choices": stream_choices
+                    "choices": stream_choices,
                 }
             ]
             result = prompt(questions)
@@ -255,7 +256,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
                 return None
             final_selection = result[0]
 
-        final_selection['content_type'] = selected_type
+        final_selection["content_type"] = selected_type
         return final_selection
 
     except (KeyboardInterrupt, TypeError):
@@ -277,7 +278,7 @@ def stream_selection():
     print(f"  - Nom : {selected_channel.get('name')}")
     print(f"  - ID : {selected_channel.get('id')}")
 
-    dash_id = selected_channel.get('streams', {}).get('dash')
+    dash_id = selected_channel.get("streams", {}).get("dash")
     if not dash_id:
         print("Aucun flux DASH trouvé pour cette chaîne.")
         return None
@@ -289,18 +290,16 @@ def stream_selection():
     final_selections = {}
 
     while True:
-        selection = prompt_for_stream_selection(
-            organized_info, final_selections.keys()
-        )
+        selection = prompt_for_stream_selection(organized_info, final_selections.keys())
 
         if selection:
-            content_type = selection.pop('content_type')
+            content_type = selection.pop("content_type")
             final_selections[content_type] = selection
 
             print("\n--- Récapitulatif de votre sélection ---")
             for stream_type, details in final_selections.items():
-                bitrate = details.get('bitrate_kbps')
-                track_id = details.get('track_id')
+                bitrate = details.get("bitrate_kbps")
+                track_id = details.get("track_id")
                 print(
                     f"  - {stream_type.capitalize()}: "
                     f"Bitrate {bitrate} kbps (ID: {track_id})"
@@ -311,29 +310,23 @@ def stream_selection():
             {
                 "type": "list",
                 "message": "Que souhaitez-vous faire ?",
-                "choices": [
-                    "Sélectionner un autre flux",
-                    "Terminer et continuer"
-                ],
+                "choices": ["Sélectionner un autre flux", "Terminer et continuer"],
             }
         ]
         action_result = prompt(continue_prompt)
 
-        if (
-            not action_result or
-            action_result[0] == "Terminer et continuer"
-        ):
+        if not action_result or action_result[0] == "Terminer et continuer":
             break
 
     if final_selections:
-        final_selections['channel'] = selected_channel
+        final_selections["channel"] = selected_channel
         return final_selections
 
     print("\nAucun flux n'a été sélectionné.")
     return None
 
 
-def get_selection(channel_id, video_quality='best', audio_quality='best'):
+def get_selection(channel_id, video_quality="best", audio_quality="best"):
     """Get stream selection for a given channel ID with specified qualities.
 
     Args:
@@ -367,9 +360,11 @@ def get_selection(channel_id, video_quality='best', audio_quality='best'):
         print("Erreur lors de l'analyse de la réponse JSON.")
         return None
 
-    print(f"Chaîne sélectionnée : {selected_channel_details.get('name')} (ID: {channel_id})")
+    print(
+        f"Chaîne sélectionnée : {selected_channel_details.get('name')} (ID: {channel_id})"
+    )
 
-    dash_id = selected_channel_details.get('streams', {}).get('dash')
+    dash_id = selected_channel_details.get("streams", {}).get("dash")
     if not dash_id:
         print("Aucun flux DASH trouvé pour cette chaîne.")
         return None
@@ -379,19 +374,19 @@ def get_selection(channel_id, video_quality='best', audio_quality='best'):
     organized_info = organize_by_content_type(manifest_info)
 
     final_selections = {}
-    final_selections['channel'] = selected_channel_details
+    final_selections["channel"] = selected_channel_details
 
     # Select video
-    if 'video' in organized_info:
-        selected_track = select_track(organized_info['video'], video_quality, 'video')
+    if "video" in organized_info:
+        selected_track = select_track(organized_info["video"], video_quality, "video")
         if selected_track:
-            final_selections['video'] = selected_track
+            final_selections["video"] = selected_track
 
     # Select audio
-    if 'audio' in organized_info:
-        selected_track = select_track(organized_info['audio'], audio_quality, 'audio')
+    if "audio" in organized_info:
+        selected_track = select_track(organized_info["audio"], audio_quality, "audio")
         if selected_track:
-            final_selections['audio'] = selected_track
+            final_selections["audio"] = selected_track
 
     return final_selections
 
@@ -407,11 +402,11 @@ def select_track(content_dict, quality_spec, content_type):
     Returns:
         dict: Selected track or None.
     """
-    if '+' in quality_spec:
-        filter_part, pref = quality_spec.split('+', 1)
+    if "+" in quality_spec:
+        filter_part, pref = quality_spec.split("+", 1)
         pref = pref.lower()
     else:
-        filter_part = ''
+        filter_part = ""
         pref = quality_spec.lower()
 
     candidates = []
@@ -424,22 +419,24 @@ def select_track(content_dict, quality_spec, content_type):
         print(f"Aucune piste {content_type} trouvée pour '{quality_spec}'.")
         return None
 
-    if pref == 'best':
-        selected = max(candidates, key=lambda x: x['bandwidth'])
-    elif pref == 'worst':
-        selected = min(candidates, key=lambda x: x['bandwidth'])
+    if pref == "best":
+        selected = max(candidates, key=lambda x: x["bandwidth"])
+    elif pref == "worst":
+        selected = min(candidates, key=lambda x: x["bandwidth"])
     else:
         # Default to best if unknown pref
-        selected = max(candidates, key=lambda x: x['bandwidth'])
+        selected = max(candidates, key=lambda x: x["bandwidth"])
 
-    print(f"{content_type.capitalize()} sélectionnée : {selected['track_id']}, {selected['bitrate_kbps']} kbps")
+    print(
+        f"{content_type.capitalize()} sélectionnée : {selected['track_id']}, {selected['bitrate_kbps']} kbps"
+    )
     return selected
 
 
 def get_epg_data_at(dt: datetime.datetime):
     """
     Fetch EPG data from the Oqee API for the nearest aligned hour of a given datetime.
-    
+
     Args:
         dt (datetime.datetime): datetime (with hour, minute, etc.)
 
@@ -449,7 +446,9 @@ def get_epg_data_at(dt: datetime.datetime):
 
     # Round to nearest hour
     if dt.minute >= 30:
-        dt_aligned = (dt + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        dt_aligned = (dt + datetime.timedelta(hours=1)).replace(
+            minute=0, second=0, microsecond=0
+        )
     else:
         dt_aligned = dt.replace(minute=0, second=0, microsecond=0)
 
@@ -474,12 +473,12 @@ def get_epg_data_at(dt: datetime.datetime):
 def select_program_from_epg(programs, original_start_date, original_end_date):
     """
     Prompt user to select a program from EPG data or keep original selection.
-    
+
     Args:
         programs (list): List of program dictionaries from EPG data
         original_start_date (datetime.datetime): User's original start date selection
         original_end_date (datetime.datetime): User's original end date selection
-    
+
     Returns:
         dict: Dictionary containing:
             - 'start_date': datetime object for start
@@ -490,10 +489,10 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
     if not programs:
         print("Aucun programme disponible dans le guide EPG.")
         return {
-            'start_date': original_start_date,
-            'end_date': original_end_date,
-            'title': None,
-            'program': None
+            "start_date": original_start_date,
+            "end_date": original_end_date,
+            "title": None,
+            "program": None,
         }
 
     # Create choices list with program information
@@ -501,29 +500,31 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
     for program in programs:
         # Extract the live data from the program
         live_data = program.get("live", program)
-        title = live_data.get('title', 'Sans titre')
-        start_time = datetime.datetime.fromtimestamp(live_data.get('start', 0))
-        end_time = datetime.datetime.fromtimestamp(live_data.get('end', 0))
+        title = live_data.get("title", "Sans titre")
+        start_time = datetime.datetime.fromtimestamp(live_data.get("start", 0))
+        end_time = datetime.datetime.fromtimestamp(live_data.get("end", 0))
         duration_min = (end_time - start_time).total_seconds() / 60
 
         choice_name = (
             f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')} | "
             f"{title} ({int(duration_min)} min)"
         )
-        program_choices.append({
-            "name": choice_name,
-            "value": program  # Store the full program object
-        })
+        program_choices.append(
+            {"name": choice_name, "value": program}  # Store the full program object
+        )
 
     # Add option to keep original selection
-    program_choices.insert(0, {
-        "name": (
-            f"Garder la sélection manuelle originale "
-            f"({original_start_date.strftime('%Y-%m-%d %H:%M:%S')} - "
-            f"{original_end_date.strftime('%Y-%m-%d %H:%M:%S')})"
-        ),
-        "value": None
-    })
+    program_choices.insert(
+        0,
+        {
+            "name": (
+                f"Garder la sélection manuelle originale "
+                f"({original_start_date.strftime('%Y-%m-%d %H:%M:%S')} - "
+                f"{original_end_date.strftime('%Y-%m-%d %H:%M:%S')})"
+            ),
+            "value": None,
+        },
+    )
 
     questions = [
         {
@@ -545,17 +546,17 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         if selected_program is None:
             print("\n✅ Sélection manuelle conservée")
             return {
-                'start_date': original_start_date,
-                'end_date': original_end_date,
-                'title': None,
-                'program': None
+                "start_date": original_start_date,
+                "end_date": original_end_date,
+                "title": None,
+                "program": None,
             }
 
         # Extract live data and convert program timestamps to datetime objects
-        live_data = selected_program.get('live', selected_program)
-        program_start = datetime.datetime.fromtimestamp(live_data.get('start', 0))
-        program_end = datetime.datetime.fromtimestamp(live_data.get('end', 0))
-        program_title = live_data.get('title', 'Sans titre')
+        live_data = selected_program.get("live", selected_program)
+        program_start = datetime.datetime.fromtimestamp(live_data.get("start", 0))
+        program_end = datetime.datetime.fromtimestamp(live_data.get("end", 0))
+        program_title = live_data.get("title", "Sans titre")
 
         print("\n✅ Programme sélectionné :")
         print(f"  - Titre : {program_title}")
@@ -563,10 +564,10 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         print(f"  - Fin : {program_end.strftime('%Y-%m-%d %H:%M:%S')}")
 
         return {
-            'start_date': program_start,
-            'end_date': program_end,
-            'title': program_title,
-            'program': selected_program
+            "start_date": program_start,
+            "end_date": program_end,
+            "title": program_title,
+            "program": selected_program,
         }
 
     except KeyboardInterrupt:
