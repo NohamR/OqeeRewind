@@ -15,21 +15,6 @@ def verify_cmd(path: str) -> bool:
     return True
 
 
-def get_missing_keys(keys, selection):
-    """Determine which DRM keys are missing based on user selection."""
-    missing_keys = []
-    for drm_info in [
-        selection["video"]["drm_info"],
-        selection["audio"]["drm_info"],
-    ]:
-        for drm in drm_info:
-            if "default_KID" in drm:
-                kid = drm["default_KID"].replace("-", "").lower()
-                if kid not in [k.split(":")[0] for k in keys]:
-                    missing_keys.append(kid)
-    return missing_keys
-
-
 def merge_segments(input_folder: str, track_id: str, output_file: str):
     """Merge downloaded segments into a single file using ffmpeg."""
     segment_folder = os.path.join(input_folder, f"segments_{track_id}")

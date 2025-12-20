@@ -13,7 +13,7 @@ from utils.input import (
 )
 from utils.oqee import OqeeClient
 from utils.downloader import get_keys
-from utils.utilities import verify_cmd, get_missing_keys, merge_segments, decrypt
+from utils.utilities import verify_cmd, merge_segments, decrypt
 from utils.times import (
     convert_date_to_sec,
     convert_sec_to_ticks,
@@ -197,38 +197,6 @@ if __name__ == "__main__":
             keys = []
         
         output_dir = args.output_dir if cli_mode else "./download"
-        # pprint(selections)
-        # missing_keys = get_missing_keys(keys, selections)
-
-        # if missing_keys:
-        #     print(f"Getting missing DRM keys {missing_keys}...")
-
-        #     method = {}
-        #     # api_url = os.getenv("API_URL")
-        #     # api_key = os.getenv("API_KEY")
-        #     api_url = None
-        #     api_key = None
-        #     if api_url and api_key:
-        #         method = {"method": "api", "api_url": api_url, "api_key": api_key}
-        #     else:
-        #         username = args.username or os.getenv("OQEE_USERNAME")
-        #         password = args.password or os.getenv("OQEE_PASSWORD")
-        #         client = OqeeClient(username, password)
-        #         verify_cmd(args.widevine_device)
-        #         method = {
-        #             "method": "device",
-        #             "device_file": args.widevine_device,
-        #             "client_class": client,
-        #         }
-
-        #     fetched_keys = get_keys(kids=missing_keys, method=method)
-        #     keys = keys + fetched_keys
-        # print(f"DRM Keys: {keys}")
-
-        # missing_keys = get_missing_keys(keys, selections)
-        # if len(missing_keys) > 0:
-        #     print(f"Some DRM keys are still missing: {missing_keys}, exiting.")
-        #     exit(1)
 
         start_tick_user = int(convert_sec_to_ticks(convert_date_to_sec(start_date), TIMESCALE))
 
