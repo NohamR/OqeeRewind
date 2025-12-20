@@ -179,9 +179,9 @@ def select_oqee_channel():
         selected_channel_details = channels_data.get(selected_channel_id)
         if selected_channel_details:
             logger.info("You have selected:")
-            logger.info("  - Name: %s", selected_channel_details.get("name"))
-            logger.info("  - ID: %s", selected_channel_details.get("id"))
-            logger.info("  - Freebox ID: %s", selected_channel_details.get("freebox_id"))
+            logger.info("  Name: %s", selected_channel_details.get("name"))
+            logger.info("  ID: %s", selected_channel_details.get("id"))
+            logger.info("  Freebox ID: %s", selected_channel_details.get("freebox_id"))
         else:
             logger.warning("Unable to find details for the selected channel.")
         return selected_channel_details
