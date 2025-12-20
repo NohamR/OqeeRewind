@@ -123,8 +123,8 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
 - [x] CLI arguments implementation + documentation
 - [x] French/English full translation
 - [ ] Better output system
-- [ ] Add more comments in the code
-- [ ] Logging system
+- [x] Add more comments in the code
+- [x] Logging system
 - [ ] Live direct restream support
 
 

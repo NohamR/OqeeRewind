@@ -57,7 +57,7 @@ async def bruteforce(track_id, date):
     total_requests = 288000
     batch_size = 20000
 
-    logger.debug("Starting bruteforce for %s", track_id)
+    logger.debug("Starting bruteforce for %s near %s", track_id, date)
 
     start_time = time.time()
 

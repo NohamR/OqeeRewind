@@ -339,7 +339,7 @@ if __name__ == "__main__":
         track_id_audio = audio_data["track_id"]
         start_tick_video = video_data["start_tick"]
         start_tick_audio = audio_data["start_tick"]
-        diff_start = start_tick_video - start_tick_audio
+        diff_start = start_tick_audio - start_tick_video
         diff_start_sec = convert_ticks_to_sec(diff_start, TIMESCALE)
 
         # ffmpeg -i "concat:init.mp4|merged_dec.m4s" -c copy output.mp4
