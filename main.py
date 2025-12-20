@@ -13,7 +13,7 @@ from utils.input import (
 )
 from utils.oqee import OqeeClient
 from utils.downloader import get_keys
-from utils.utilities import verify_cmd, merge_segments, decrypt
+from utils.utilities import verify_cmd, merge_segments, decrypt, verify_mp4ff
 from utils.times import (
     convert_date_to_sec,
     convert_sec_to_ticks,
@@ -90,6 +90,7 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
+    verify_mp4ff()
 
     # Check if CLI mode
     cli_mode = any(
@@ -196,7 +197,7 @@ if __name__ == "__main__":
             title = title or f"{freebox_id}_{start_date.strftime('%Y%m%d_%H%M%S')}"
             keys = []
         
-        output_dir = args.output_dir if cli_mode else "./download"
+        output_dir = os.getenv("OUTPUT_DIR") or (args.output_dir if cli_mode else "./download")
 
         start_tick_user = int(convert_sec_to_ticks(convert_date_to_sec(start_date), TIMESCALE))
 

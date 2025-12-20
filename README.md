@@ -115,9 +115,9 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
     - [x] Lib to install (pip + mp4ff + ffmpeg) 
     - [ ] Demo GIF
 - [ ] Lint code
-- [ ] Oqee widevine license implementation (.wvd) + mention README
+- [x] Oqee widevine license implementation (.wvd) + mention README
 - [x] Full implementation
-- [ ] Verify mp4ff installation
+- [x] Verify mp4ff installation
 - [x] CLI arguments implementation + documentation
 - [ ] French/English full translation
 - [ ] Better output system

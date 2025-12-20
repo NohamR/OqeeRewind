@@ -2,6 +2,17 @@ import os
 import sys
 import logging
 import subprocess
+import shutil
+
+
+def verify_mp4ff():
+    """Verify if mp4ff-decrypt is installed and available in PATH."""
+    if shutil.which("mp4ff-decrypt") is None:
+        print("❌ Error: mp4ff-decrypt is not installed or not in PATH.")
+        print("Please install it using:")
+        print("go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest")
+        sys.exit(1)
+    return True
 
 
 def verify_cmd(path: str) -> bool:
