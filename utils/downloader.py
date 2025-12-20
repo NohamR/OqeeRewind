@@ -4,6 +4,7 @@ import requests
 from pywidevine.cdm import Cdm
 from pywidevine.device import Device
 from pywidevine.pssh import PSSH
+from utils.logging_config import logger
 
 
 def fetch_drm_keys(kid: str, api_url: str, api_key: str) -> str:
@@ -40,14 +41,14 @@ def generate_pssh(kids: list[str]) -> PSSH:
 def get_keys(kids: list[str], method: dict) -> list[str]:
     """Retrieve DRM keys using the specified method."""
     if method["method"] == "api":
-        print("Fetching DRM keys via API...")
+        logger.info("Fetching DRM keys via API...")
         keys = []
         for kid in kids:
             key = fetch_drm_keys(kid, method["api_url"], method["api_key"])
             keys.append(f"{kid}:{key}")
         return keys
 
-    print("Fetching DRM keys via Widevine CDM...")
+    logger.info("Fetching DRM keys via Widevine CDM...")
     client = method["client_class"]
 
     device = Device.load(method["device_file"])

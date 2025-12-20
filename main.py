@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import subprocess
 import shutil
+import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from utils.input import (
@@ -27,6 +28,7 @@ from utils.times import (
     bruteforce,
 )
 from utils.stream import save_segments, get_kid, get_init
+from utils.logging_config import setup_logging, logger
 
 load_dotenv()
 TIMESCALE = 90000
@@ -83,12 +85,20 @@ def parse_arguments():
         default="./widevine/device.wvd",
         help="Path to Widevine device file (default: ./widevine/device.wvd)",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level (default: INFO)",
+    )
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_arguments()
+    setup_logging(level=getattr(logging, args.log_level.upper()))
     verify_mp4ff()
 
     # Check if CLI mode
@@ -110,7 +120,7 @@ if __name__ == "__main__":
     try:
         if cli_mode:
             # CLI mode
-            print("Running in CLI mode...")
+            logger.info("Running in CLI mode...")
 
             # Parse dates
             start_date = None
@@ -120,17 +130,17 @@ if __name__ == "__main__":
                 try:
                     start_date = datetime.strptime(args.start_date, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
-                    print("Invalid start-date format. Use YYYY-MM-DD HH:MM:SS")
+                    logger.error("Invalid start-date format. Use YYYY-MM-DD HH:MM:SS")
                     sys.exit(1)
 
             if args.end_date and args.duration:
-                print("Cannot specify both --end-date and --duration")
+                logger.error("Cannot specify both --end-date and --duration")
                 sys.exit(1)
             elif args.end_date:
                 try:
                     end_date = datetime.strptime(args.end_date, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
-                    print("Invalid end-date format. Use YYYY-MM-DD HH:MM:SS")
+                    logger.error("Invalid end-date format. Use YYYY-MM-DD HH:MM:SS")
                     sys.exit(1)
             elif args.duration and start_date:
                 # Parse duration HH:MM:SS
@@ -139,14 +149,14 @@ if __name__ == "__main__":
                     duration_td = timedelta(hours=h, minutes=m, seconds=s)
                     end_date = start_date + duration_td
                 except ValueError:
-                    print("Invalid duration format. Use HH:MM:SS")
+                    logger.error("Invalid duration format. Use HH:MM:SS")
                     sys.exit(1)
 
             if not start_date:
-                print("start-date is required in CLI mode")
+                logger.error("start-date is required in CLI mode")
                 sys.exit(1)
             if not end_date:
-                print("Either end-date or duration is required in CLI mode")
+                logger.error("Either end-date or duration is required in CLI mode")
                 sys.exit(1)
 
             keys = args.key or []
@@ -160,18 +170,18 @@ if __name__ == "__main__":
             # Get stream selections
             selections = get_selection(args.channel_id, args.video, args.audio)
             if not selections:
-                print("Error during stream selection.")
+                logger.error("Error during stream selection.")
                 sys.exit(1)
 
-            print(f"Start date: {start_date}")
-            print(f"End date: {end_date}")
-            print(f"Channel ID: {args.channel_id}")
-            print(f"Video quality: {args.video}")
-            print(f"Audio track: {args.audio}")
-            print(f"Title: {title}")
-            print(f"DRM keys: {keys}")
-            print(f"Output dir: {args.output_dir}")
-            print(f"Widevine device: {args.widevine_device}")
+            logger.info(f"Start date: {start_date}")
+            logger.info(f"End date: {end_date}")
+            logger.info(f"Channel ID: {args.channel_id}")
+            logger.info(f"Video quality: {args.video}")
+            logger.info(f"Audio track: {args.audio}")
+            logger.info(f"Title: {title}")
+            logger.info(f"DRM keys: {keys}")
+            logger.info(f"Output dir: {args.output_dir}")
+            logger.info(f"Widevine device: {args.widevine_device}")
 
         else:
             # Interactive mode
@@ -219,7 +229,7 @@ if __name__ == "__main__":
             track_id = init_segment.split("/")[-1].split("_init")[0]
 
             if start_date.date() == manifest_date.date():
-                print(
+                logger.info(
                     "Date match between requested start date and manifest data, proceeding with download..."
                 )
 
@@ -230,7 +240,7 @@ if __name__ == "__main__":
                     start_tick_manifest, end_date, TIMESCALE, DURATION
                 )
             else:
-                print(
+                logger.info(
                     "Date mismatch between requested start date and manifest data, bruteforce method is needed."
                 )
 
@@ -245,7 +255,7 @@ if __name__ == "__main__":
                 )
 
             rep_nb = (end_tick - start_tick) // DURATION + 1
-            print(f"Total segments to fetch for {content_type}: {rep_nb}")
+            logger.info(f"Total segments to fetch for {content_type}: {rep_nb}")
             data = {
                 "start_tick": start_tick,
                 "rep_nb": rep_nb,
@@ -286,7 +296,7 @@ if __name__ == "__main__":
                     key = k
                     break
             if not key:
-                print(f"No key found for KID {kid}, need to fetch it.")
+                logger.info(f"No key found for KID {kid}, need to fetch it.")
                 missing_keys.append(kid)
 
         if len(missing_keys) > 0:
@@ -307,6 +317,7 @@ if __name__ == "__main__":
                 }
 
             fetched_keys = get_keys(kids=missing_keys, method=method)
+            logger.info(f"Fetched keys: {fetched_keys}")
             keys = keys + fetched_keys
 
         for content_type, data in [("video", video_data), ("audio", audio_data)]:
@@ -336,7 +347,7 @@ if __name__ == "__main__":
             f'ffmpeg -i "concat:{output_dir}/segments_{track_id_video}/init.mp4|'
             f'{output_dir}/dec_video.mp4" -c copy {output_dir}/video.mp4'
         )
-        print("FFmpeg command:", command_ffmpeg)
+        logger.debug(f"FFmpeg command: {command_ffmpeg}")
         subprocess.run(
             command_ffmpeg,
             shell=True,
@@ -349,7 +360,7 @@ if __name__ == "__main__":
             f'{output_dir}/dec_audio.mp4" -c copy {output_dir}/audio.mp4'
         )
 
-        print("FFmpeg command:", command_ffmpeg)
+        logger.debug(f"FFmpeg command: {command_ffmpeg}")
         subprocess.run(
             command_ffmpeg,
             shell=True,
@@ -362,7 +373,7 @@ if __name__ == "__main__":
             f"ffmpeg -i {output_dir}/video.mp4 -itsoffset {diff_start_sec} "
             f"-i {output_dir}/audio.mp4 -c copy -map 0:v -map 1:a {output_dir}/output.mp4"
         )
-        print("Merge command:", COMMAND_MERGE)
+        logger.debug(f"Merge command: {COMMAND_MERGE}")
         subprocess.run(
             COMMAND_MERGE,
             shell=True,
@@ -373,7 +384,7 @@ if __name__ == "__main__":
 
         FINAL_OUTPUT = f"{output_dir}/{title}.mp4"
         shutil.move(f"{output_dir}/output.mp4", FINAL_OUTPUT)
-        print(f"Final output saved to {FINAL_OUTPUT}")
+        logger.info(f"Final output saved to {FINAL_OUTPUT}")
 
         os.remove(f"{output_dir}/dec_video.mp4")
         os.remove(f"{output_dir}/dec_audio.mp4")
@@ -385,7 +396,7 @@ if __name__ == "__main__":
         shutil.rmtree(f"{output_dir}/segments_{audio_data['track_id']}")
 
     except KeyboardInterrupt:
-        print("\n\nProgram interrupted by user. Goodbye!")
+        logger.info("\n\nProgram interrupted by user. Goodbye!")
 
 
 # uv run python main.py --start-date "2025-01-01 12:00:00" --duration "01:00:00" \

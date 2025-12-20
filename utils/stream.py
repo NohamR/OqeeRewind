@@ -11,6 +11,7 @@ from typing import Dict, Any
 import requests
 import aiohttp
 from tqdm.asyncio import tqdm
+from utils.logging_config import logger
 
 
 def parse_mpd_manifest(mpd_content: str) -> Dict[str, Any]:
@@ -373,7 +374,7 @@ def get_init(output_folder, track_id):
         init_path = f"{output_folder}/segments_{track_id}/init.mp4"
         with open(init_path, "wb") as f:
             f.write(response.content)
-        print(f"✅ Saved initialization segment to {init_path}")
+        logger.debug(f"Saved initialization segment to {init_path}")
     return init_path
 
 
@@ -404,19 +405,18 @@ async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
                     with open(filename, "wb") as f:
                         f.write(content)
                     return True
-                print(
-                    f"❌ Failed to download segment {rep} (tick {tick}): "
+                logger.error(
+                    f"Failed to download segment {rep} (tick {tick}): "
                     f"HTTP {resp.status}"
                 )
                 return False
         except aiohttp.ClientError as e:
-            print(f"⚠️ Error downloading segment {rep} (tick {tick}): {e}")
+            logger.warning(f"Error downloading segment {rep} (tick {tick}): {e}")
             return False
 
-    print(f"Starting download of {rep_nb} segments...")
-    print(f"📦 Track ID: {track_id}")
-    print(f"🎯 Base tick: {start_tick}")
-    print(f"{'='*50}")
+    logger.info(f"Starting download of {rep_nb} segments...")
+    logger.debug(f"Track ID: {track_id}")
+    logger.debug(f"Base tick: {start_tick}")
 
     start_time = time.time()
     successful = 0
@@ -443,10 +443,8 @@ async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
     end_time = time.time()
     elapsed = end_time - start_time
 
-    print(f"{'='*50}")
-    print(f"✅ Download completed in {elapsed:.2f}s")
-    print(f"💾 Files saved to {output_folder}/segments_{track_id}/")
-    print(f"{'='*50}")
+    logger.debug(f"Download completed in {elapsed:.2f}s")
+    logger.info(f"Files saved to {output_folder}/segments_{track_id}/")
 
 
 def get_kid(output_folder, track_id):
@@ -463,7 +461,7 @@ def get_kid(output_folder, track_id):
     for filename in os.listdir(folder):
         if filename.endswith(".m4s"):
             filepath = os.path.join(folder, filename)
-            print(f"Checking file: {filepath}")
+            logger.debug(f"Checking file: {filepath}")
             with open(filepath, "rb") as f:
                 data = f.read()
                 # Pattern before KID

@@ -8,6 +8,7 @@ from InquirerPy.validator import EmptyInputValidator
 from InquirerPy.base.control import Choice
 
 from utils.stream import get_manifest, parse_mpd_manifest, organize_by_content_type
+from utils.logging_config import logger
 
 SERVICE_PLAN_API_URL = "https://api.oqee.net/api/v6/service_plan"
 EPG_API_URL = "https://api.oqee.net/api/v1/epg/all/{unix}"
@@ -75,7 +76,7 @@ def get_date_input():
         start_date = datetime.datetime.strptime(
             start_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
         )
-        print(f"Start date/time: {start_date}")
+        logger.debug(f"Start date/time: {start_date}")
 
     question_end_date = [
         {
@@ -115,18 +116,18 @@ def get_date_input():
                 h, m, s = map(int, duration_str.split(":"))
                 duration_td = datetime.timedelta(hours=h, minutes=m, seconds=s)
                 end_date = start_date + duration_td
-                print(f"\nEnd date/time: {end_date}")
+                logger.debug(f"End date/time: {end_date}")
             except (ValueError, TypeError):
-                print("Unable to parse the provided duration string.")
+                logger.error("Unable to parse the provided duration string.")
 
         elif end_date_result.get("datetime"):
             try:
                 end_date = datetime.datetime.strptime(
                     end_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
                 )
-                print(f"\nEnd date/time: {end_date}")
+                logger.debug(f"End date/time: {end_date}")
             except (ValueError, TypeError):
-                print("Unable to parse the provided date/time string.")
+                logger.error("Unable to parse the provided date/time string.")
     return start_date, end_date
 
 
@@ -138,12 +139,12 @@ def select_oqee_channel():
     """
     api_url = SERVICE_PLAN_API_URL
     try:
-        print("Loading channel list from Oqee API...")
+        logger.info("Loading channel list from Oqee API...")
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         data = response.json()
         if not data.get("success") or "channels" not in data.get("result", {}):
-            print("Error: Unexpected API response format.")
+            logger.error("Error: Unexpected API response format.")
             return None
 
         channels_data = data["result"]["channels"]
@@ -154,10 +155,10 @@ def select_oqee_channel():
         choices.sort(key=lambda x: x["name"])
 
     except requests.exceptions.RequestException as e:
-        print(f"A network error occurred: {e}")
+        logger.error(f"A network error occurred: {e}")
         return None
     except ValueError:
-        print("Error parsing JSON response.")
+        logger.error("Error parsing JSON response.")
         return None
 
     questions = [
@@ -177,19 +178,19 @@ def select_oqee_channel():
         selected_channel_id = result[0]
         selected_channel_details = channels_data.get(selected_channel_id)
         if selected_channel_details:
-            print("\n✅ You have selected:")
-            print(f"  - Name: {selected_channel_details.get('name')}")
-            print(f"  - ID: {selected_channel_details.get('id')}")
-            print(f"  - Freebox ID: {selected_channel_details.get('freebox_id')}")
+            logger.info("You have selected:")
+            logger.info(f"  - Name: {selected_channel_details.get('name')}")
+            logger.info(f"  - ID: {selected_channel_details.get('id')}")
+            logger.info(f"  - Freebox ID: {selected_channel_details.get('freebox_id')}")
         else:
-            print("Unable to find details for the selected channel.")
+            logger.warning("Unable to find details for the selected channel.")
         return selected_channel_details
 
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        logger.info("Operation cancelled by user.")
         return None
     except (ValueError, KeyError, IndexError) as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
         return None
 
 
@@ -232,7 +233,7 @@ def prompt_for_stream_selection(stream_info, already_selected_types):
         final_selection = None
         if len(available_streams) == 1:
             final_selection = available_streams[0]
-            print("Only one stream available for this quality, automatic selection.")
+            logger.debug("Only one stream available for this quality, automatic selection.")
         else:
             stream_choices = [
                 {
@@ -274,13 +275,13 @@ def stream_selection():
     if not selected_channel:
         return None
 
-    print("\n✅ Selected channel:")
-    print(f"  - Name: {selected_channel.get('name')}")
-    print(f"  - ID: {selected_channel.get('id')}")
+    logger.debug("Selected channel:")
+    logger.debug(f"  - Name: {selected_channel.get('name')}")
+    logger.debug(f"  - ID: {selected_channel.get('id')}")
 
     dash_id = selected_channel.get("streams", {}).get("dash")
     if not dash_id:
-        print("No DASH stream found for this channel.")
+        logger.error("No DASH stream found for this channel.")
         return None
 
     mpd_content = get_manifest(dash_id)
@@ -296,15 +297,15 @@ def stream_selection():
             content_type = selection.pop("content_type")
             final_selections[content_type] = selection
 
-            print("\n--- Selection Summary ---")
+            logger.info("--- Selection Summary ---")
             for stream_type, details in final_selections.items():
                 bitrate = details.get("bitrate_kbps")
                 track_id = details.get("track_id")
-                print(
+                logger.info(
                     f"  - {stream_type.capitalize()}: "
                     f"Bitrate {bitrate} kbps (ID: {track_id})"
                 )
-            print("----------------------------------------")
+            logger.info("----------------------------------------")
 
         continue_prompt = [
             {
@@ -322,7 +323,7 @@ def stream_selection():
         final_selections["channel"] = selected_channel
         return final_selections
 
-    print("\nNo stream has been selected.")
+    logger.info("No stream has been selected.")
     return None
 
 
@@ -344,29 +345,29 @@ def get_selection(channel_id, video_quality="best", audio_quality="best"):
         response.raise_for_status()
         data = response.json()
         if not data.get("success") or "channels" not in data.get("result", {}):
-            print("Error: Unable to retrieve channel details.")
+            logger.error("Error: Unable to retrieve channel details.")
             return None
 
         channels_data = data["result"]["channels"]
         selected_channel_details = channels_data.get(str(channel_id))
         if not selected_channel_details:
-            print(f"Channel with ID {channel_id} not found.")
+            logger.error(f"Channel with ID {channel_id} not found.")
             return None
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error: {e}")
+        logger.error(f"Network error: {e}")
         return None
     except ValueError:
-        print("Error parsing JSON response.")
+        logger.error("Error parsing JSON response.")
         return None
 
-    print(
+    logger.info(
         f"Selected channel: {selected_channel_details.get('name')} (ID: {channel_id})"
     )
 
     dash_id = selected_channel_details.get("streams", {}).get("dash")
     if not dash_id:
-        print("No DASH stream found for this channel.")
+        logger.error("No DASH stream found for this channel.")
         return None
 
     mpd_content = get_manifest(dash_id)
@@ -416,7 +417,7 @@ def select_track(content_dict, quality_spec, content_type):
         candidates.extend(tracks)
 
     if not candidates:
-        print(f"No {content_type} track found for '{quality_spec}'.")
+        logger.warning(f"No {content_type} track found for '{quality_spec}'.")
         return None
 
     if pref == "best":
@@ -427,7 +428,7 @@ def select_track(content_dict, quality_spec, content_type):
         # Default to best if unknown pref
         selected = max(candidates, key=lambda x: x["bandwidth"])
 
-    print(
+    logger.info(
         f"{content_type.capitalize()} selected: {selected['track_id']}, {selected['bitrate_kbps']} kbps"
     )
     return selected
@@ -453,7 +454,7 @@ def get_epg_data_at(dt: datetime.datetime):
         dt_aligned = dt.replace(minute=0, second=0, microsecond=0)
 
     unix_time = int(dt_aligned.timestamp())
-    print(f"Fetching EPG for aligned time: {dt_aligned} (unix={unix_time})")
+    logger.info(f"Fetching EPG for aligned time: {dt_aligned} (unix={unix_time})")
 
     try:
         response = requests.get(EPG_API_URL.format(unix=unix_time), timeout=10)
@@ -463,10 +464,10 @@ def get_epg_data_at(dt: datetime.datetime):
         return data.get("result")
 
     except requests.exceptions.RequestException as e:
-        print(f"A network error occurred: {e}")
+        logger.error(f"A network error occurred: {e}")
         return None
     except ValueError:
-        print("Error parsing JSON response.")
+        logger.error("Error parsing JSON response.")
         return None
 
 
@@ -487,7 +488,7 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
             - 'program': dict or None (full program data if selected)
     """
     if not programs:
-        print("No programs available in the EPG guide.")
+        logger.warning("No programs available in the EPG guide.")
         return {
             "start_date": original_start_date,
             "end_date": original_end_date,
@@ -544,7 +545,7 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
 
         # If user chose to keep original selection
         if selected_program is None:
-            print("\n✅ Manual selection kept")
+            logger.info("Manual selection kept")
             return {
                 "start_date": original_start_date,
                 "end_date": original_end_date,
@@ -558,10 +559,10 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         program_end = datetime.datetime.fromtimestamp(live_data.get("end", 0))
         program_title = live_data.get("title", "Untitled")
 
-        print("\n✅ Selected program:")
-        print(f"  - Title: {program_title}")
-        print(f"  - Start: {program_start.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"  - End: {program_end.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info("Selected program:")
+        logger.info(f"  - Title: {program_title}")
+        logger.info(f"  - Start: {program_start.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"  - End: {program_end.strftime('%Y-%m-%d %H:%M:%S')}")
 
         return {
             "start_date": program_start,
@@ -571,5 +572,5 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         }
 
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        logger.error("Operation cancelled by user.")
         return None

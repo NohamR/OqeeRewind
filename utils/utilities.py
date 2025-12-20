@@ -2,17 +2,17 @@
 
 import os
 import sys
-import logging
 import subprocess
 import shutil
+from utils.logging_config import logger
 
 
 def verify_mp4ff():
     """Verify if mp4ff-decrypt is installed and available in PATH."""
     if shutil.which("mp4ff-decrypt") is None:
-        print("❌ Error: mp4ff-decrypt is not installed or not in PATH.")
-        print("Please install it using:")
-        print("go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest")
+        logger.error("mp4ff-decrypt is not installed or not in PATH.")
+        logger.info("Please install it using:")
+        logger.info("go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest")
         sys.exit(1)
     return True
 
@@ -20,10 +20,10 @@ def verify_mp4ff():
 def verify_cmd(path: str) -> bool:
     """Verify if the file provided at path is valid and exists, otherwise log error and exit."""
     if not os.path.exists(path):
-        logging.error("File does not exist: %s", path)
+        logger.error(f"File does not exist: {path}")
         sys.exit(1)
     if not os.path.isfile(path):
-        logging.error("Path is not a file: %s", path)
+        logger.error(f"Path is not a file: {path}")
         sys.exit(1)
     return True
 
@@ -40,7 +40,7 @@ def merge_segments(input_folder: str, track_id: str, output_file: str):
         for fname in segment_files:
             with open(f"{segment_folder}/{fname}", "rb") as infile:
                 outfile.write(infile.read())
-    print(f"✅ Merged segments into {output_file}")
+    logger.info(f"Merged segments into {output_file}")
 
 
 def decrypt(input_file, init_path, output_file, key):
@@ -63,7 +63,7 @@ def decrypt(input_file, init_path, output_file, key):
         check=False,
     )
     if result.returncode == 0:
-        print(f"✅ Decrypted {input_file} to {output_file}")
+        logger.info(f"Decrypted {input_file} to {output_file}")
         return True
-    print(f"❌ Decryption failed: {result.stderr}")
+    logger.error(f"Decryption failed: {result.stderr}")
     return False

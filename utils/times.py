@@ -8,6 +8,7 @@ import aiohttp
 from tqdm import tqdm
 
 from utils.stream import fetch_segment
+from utils.logging_config import logger
 
 
 def convert_ticks_to_sec(ticks, timescale):
@@ -56,8 +57,7 @@ async def bruteforce(track_id, date):
     total_requests = 288000
     batch_size = 20000
 
-    print(f"Starting bruteforce for {track_id}")
-    print(f"{'='*50}")
+    logger.debug(f"Starting bruteforce for {track_id}")
 
     start_time = time.time()
 
@@ -86,18 +86,16 @@ async def bruteforce(track_id, date):
 
                 # Stop if we found valid ticks
                 if valid_ticks:
-                    print(f"Found valid ticks: {valid_ticks}, stopping bruteforce.")
+                    logger.debug(f"Found valid ticks: {valid_ticks}, stopping bruteforce.")
                     break
 
     except KeyboardInterrupt:
-        print("\n\n🛑 Interrupted by user (Ctrl+C)")
+        logger.error("Interrupted by user (Ctrl+C)")
 
     elapsed = time.time() - start_time
-    print(f"\n{'='*50}")
-    print(f"✅ Completed in {elapsed:.2f}s")
-    print(f"⚡ Speed: {total_requests / elapsed if elapsed > 0 else 0:.2f} req/s")
-    print(f"📊 Total checked: {total_requests}")
-    print(f"{'='*50}")
+    logger.debug(f"Completed in {elapsed:.2f}s")
+    logger.debug(f"Speed: {total_requests / elapsed if elapsed > 0 else 0:.2f} req/s")
+    logger.debug(f"Total checked: {total_requests}")
 
     return valid_ticks
 

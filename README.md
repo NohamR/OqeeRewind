@@ -64,8 +64,9 @@ uv run main.py
 You can automate the download by providing arguments.
 
 ```bash
-usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE] [--duration DURATION] [--channel-id CHANNEL_ID] [--video VIDEO] [--audio AUDIO]
-               [--title TITLE] [--username USERNAME] [--password PASSWORD] [--key KEY] [--output-dir OUTPUT_DIR] [--widevine-device WIDEVINE_DEVICE]
+usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE] [--duration DURATION] [--channel-id CHANNEL_ID] [--video VIDEO] [--audio AUDIO] [--title TITLE]
+               [--username USERNAME] [--password PASSWORD] [--key KEY] [--output-dir OUTPUT_DIR] [--widevine-device WIDEVINE_DEVICE]
+               [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 options:
   -h, --help            show this help message and exit
@@ -85,6 +86,8 @@ options:
                         Output directory for downloaded files (default: ./download)
   --widevine-device WIDEVINE_DEVICE
                         Path to Widevine device file (default: ./widevine/device.wvd)
+  --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the logging level (default: INFO)
 ```
 
 #### Examples
@@ -118,7 +121,7 @@ In order to decrypt DRM content, you will need to have a dumped CDM, after that 
 - [x] Full implementation
 - [x] Verify mp4ff installation
 - [x] CLI arguments implementation + documentation
-- [ ] French/English full translation
+- [x] French/English full translation
 - [ ] Better output system
 - [ ] Add more comments in the code
 - [ ] Logging system

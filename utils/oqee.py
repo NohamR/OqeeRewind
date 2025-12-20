@@ -5,6 +5,7 @@ from urllib.parse import urlparse, parse_qs
 import requests
 
 from dotenv import load_dotenv
+from utils.logging_config import logger
 
 load_dotenv()
 
@@ -80,7 +81,7 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
 
     def configure(self, username, password):
         """Configure the client by logging in and processing title information."""
-        print("Logging in")
+        logger.info("Logging in")
         self.login(username, password)
 
     def _build_headers(self, overrides=None, remove=None):
@@ -115,7 +116,7 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         data = self.session.get(
             "https://api.oqee.net/api/v2/user/profiles", headers=headers
         ).json()
-        print("Selecting first profile by default.")
+        logger.info("Selecting first profile by default.")
         return data["result"][0]["id"]
 
     def login_cred(self, username, password):
@@ -208,19 +209,19 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         Log in to the Oqee service and set up necessary tokens and headers.
         """
         if not username or not password:
-            print("No credentials provided, using IP login.")
+            logger.info("No credentials provided, using IP login.")
             self.access_token = self.login_ip()
         else:
-            print("Logging in with provided credentials")
+            logger.info("Logging in with provided credentials")
             try:
                 self.access_token = self.login_cred(username, password)
             except ValueError as e:
-                print(f"Credential login failed: {e}. Falling back to IP login.")
+                logger.warning(f"Credential login failed: {e}. Falling back to IP login.")
                 self.access_token = self.login_ip()
 
-        print("Fetching rights token")
+        logger.info("Fetching rights token")
         self.right_token = self.right()
-        print("Fetching profile ID")
+        logger.info("Fetching profile ID")
         self.profil_id = self.profil()
 
         self.headers = self._build_headers(
