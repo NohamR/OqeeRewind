@@ -112,23 +112,27 @@ uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "0
 In order to decrypt DRM content, you will need to have a dumped CDM, after that you will need to place the CDM files into the `./widevine/` directory. For legal reasons we do not include the CDM with the software, and you will have to source one yourself.
 
 ## Todo
+
+### Completed
 - [x] Bruteforce implementation
 - [x] EPG info support
 - [x] License
-- [ ] Better README
-    - [x] Lib used
-    - [x] How to use
-    - [x] Lib to install (pip + mp4ff + ffmpeg) 
-    - [ ] Demo GIF
-- [ ] Lint code
-- [x] Oqee widevine license implementation (.wvd) + mention README
+- [x] Lint code
+- [x] Oqee Widevine license implementation (.wvd)
 - [x] Full implementation
 - [x] Verify mp4ff installation
 - [x] CLI arguments implementation + documentation
 - [x] French/English full translation
-- [ ] Better output system
 - [x] Add more comments in the code
 - [x] Logging system
+- [x] README improvements:
+    - [x] Libraries used
+    - [x] Usage instructions
+    - [x] Installation requirements (pip + mp4ff + ffmpeg)
+    - [x] Demo GIF
+
+### In Progress
+- [ ] Better output system
 - [ ] Live direct restream support
 
 
