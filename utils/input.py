@@ -76,7 +76,7 @@ def get_date_input():
         start_date = datetime.datetime.strptime(
             start_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
         )
-        logger.debug(f"Start date/time: {start_date}")
+        logger.debug("Start date/time: %s", start_date)
 
     question_end_date = [
         {
@@ -116,7 +116,7 @@ def get_date_input():
                 h, m, s = map(int, duration_str.split(":"))
                 duration_td = datetime.timedelta(hours=h, minutes=m, seconds=s)
                 end_date = start_date + duration_td
-                logger.debug(f"End date/time: {end_date}")
+                logger.debug("End date/time: %s", end_date)
             except (ValueError, TypeError):
                 logger.error("Unable to parse the provided duration string.")
 
@@ -125,7 +125,7 @@ def get_date_input():
                 end_date = datetime.datetime.strptime(
                     end_date_result["datetime"], "%Y-%m-%d %H:%M:%S"
                 )
-                logger.debug(f"End date/time: {end_date}")
+                logger.debug("End date/time: %s", end_date)
             except (ValueError, TypeError):
                 logger.error("Unable to parse the provided date/time string.")
     return start_date, end_date
@@ -155,7 +155,7 @@ def select_oqee_channel():
         choices.sort(key=lambda x: x["name"])
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"A network error occurred: {e}")
+        logger.error("A network error occurred: %s", e)
         return None
     except ValueError:
         logger.error("Error parsing JSON response.")
@@ -179,9 +179,9 @@ def select_oqee_channel():
         selected_channel_details = channels_data.get(selected_channel_id)
         if selected_channel_details:
             logger.info("You have selected:")
-            logger.info(f"  - Name: {selected_channel_details.get('name')}")
-            logger.info(f"  - ID: {selected_channel_details.get('id')}")
-            logger.info(f"  - Freebox ID: {selected_channel_details.get('freebox_id')}")
+            logger.info("  - Name: %s", selected_channel_details.get("name"))
+            logger.info("  - ID: %s", selected_channel_details.get("id"))
+            logger.info("  - Freebox ID: %s", selected_channel_details.get("freebox_id"))
         else:
             logger.warning("Unable to find details for the selected channel.")
         return selected_channel_details
@@ -190,7 +190,7 @@ def select_oqee_channel():
         logger.info("Operation cancelled by user.")
         return None
     except (ValueError, KeyError, IndexError) as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        logger.error("An unexpected error occurred: %s", e)
         return None
 
 
@@ -276,8 +276,8 @@ def stream_selection():
         return None
 
     logger.debug("Selected channel:")
-    logger.debug(f"  - Name: {selected_channel.get('name')}")
-    logger.debug(f"  - ID: {selected_channel.get('id')}")
+    logger.debug("  - Name: %s", selected_channel.get("name"))
+    logger.debug("  - ID: %s", selected_channel.get("id"))
 
     dash_id = selected_channel.get("streams", {}).get("dash")
     if not dash_id:
@@ -302,8 +302,8 @@ def stream_selection():
                 bitrate = details.get("bitrate_kbps")
                 track_id = details.get("track_id")
                 logger.info(
-                    f"  - {stream_type.capitalize()}: "
-                    f"Bitrate {bitrate} kbps (ID: {track_id})"
+                    "  - %s: Bitrate %s kbps (ID: %s)",
+                    stream_type.capitalize(), bitrate, track_id
                 )
             logger.info("----------------------------------------")
 
@@ -351,18 +351,19 @@ def get_selection(channel_id, video_quality="best", audio_quality="best"):
         channels_data = data["result"]["channels"]
         selected_channel_details = channels_data.get(str(channel_id))
         if not selected_channel_details:
-            logger.error(f"Channel with ID {channel_id} not found.")
+            logger.error("Channel with ID %s not found.", channel_id)
             return None
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Network error: {e}")
+        logger.error("Network error: %s", e)
         return None
     except ValueError:
         logger.error("Error parsing JSON response.")
         return None
 
     logger.info(
-        f"Selected channel: {selected_channel_details.get('name')} (ID: {channel_id})"
+        "Selected channel: %s (ID: %s)",
+        selected_channel_details.get("name"), channel_id
     )
 
     dash_id = selected_channel_details.get("streams", {}).get("dash")
@@ -417,7 +418,7 @@ def select_track(content_dict, quality_spec, content_type):
         candidates.extend(tracks)
 
     if not candidates:
-        logger.warning(f"No {content_type} track found for '{quality_spec}'.")
+        logger.warning("No %s track found for '%s'.", content_type, quality_spec)
         return None
 
     if pref == "best":
@@ -429,7 +430,8 @@ def select_track(content_dict, quality_spec, content_type):
         selected = max(candidates, key=lambda x: x["bandwidth"])
 
     logger.info(
-        f"{content_type.capitalize()} selected: {selected['track_id']}, {selected['bitrate_kbps']} kbps"
+        "%s selected: %s, %d kbps",
+        content_type.capitalize(), selected["track_id"], selected["bitrate_kbps"]
     )
     return selected
 
@@ -454,7 +456,7 @@ def get_epg_data_at(dt: datetime.datetime):
         dt_aligned = dt.replace(minute=0, second=0, microsecond=0)
 
     unix_time = int(dt_aligned.timestamp())
-    logger.info(f"Fetching EPG for aligned time: {dt_aligned} (unix={unix_time})")
+    logger.info("Fetching EPG for aligned time: %s (unix=%d)", dt_aligned, unix_time)
 
     try:
         response = requests.get(EPG_API_URL.format(unix=unix_time), timeout=10)
@@ -464,7 +466,7 @@ def get_epg_data_at(dt: datetime.datetime):
         return data.get("result")
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"A network error occurred: {e}")
+        logger.error("A network error occurred: %s", e)
         return None
     except ValueError:
         logger.error("Error parsing JSON response.")
@@ -560,9 +562,9 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         program_title = live_data.get("title", "Untitled")
 
         logger.info("Selected program:")
-        logger.info(f"  - Title: {program_title}")
-        logger.info(f"  - Start: {program_start.strftime('%Y-%m-%d %H:%M:%S')}")
-        logger.info(f"  - End: {program_end.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info("  - Title: %s", program_title)
+        logger.info("  - Start: %s", program_start.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info("  - End: %s", program_end.strftime("%Y-%m-%d %H:%M:%S"))
 
         return {
             "start_date": program_start,

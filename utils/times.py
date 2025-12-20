@@ -57,7 +57,7 @@ async def bruteforce(track_id, date):
     total_requests = 288000
     batch_size = 20000
 
-    logger.debug(f"Starting bruteforce for {track_id}")
+    logger.debug("Starting bruteforce for %s", track_id)
 
     start_time = time.time()
 
@@ -86,16 +86,16 @@ async def bruteforce(track_id, date):
 
                 # Stop if we found valid ticks
                 if valid_ticks:
-                    logger.debug(f"Found valid ticks: {valid_ticks}, stopping bruteforce.")
+                    logger.debug("Found valid ticks: %s, stopping bruteforce.", valid_ticks)
                     break
 
     except KeyboardInterrupt:
         logger.error("Interrupted by user (Ctrl+C)")
 
     elapsed = time.time() - start_time
-    logger.debug(f"Completed in {elapsed:.2f}s")
-    logger.debug(f"Speed: {total_requests / elapsed if elapsed > 0 else 0:.2f} req/s")
-    logger.debug(f"Total checked: {total_requests}")
+    logger.debug("Completed in %.2fs", elapsed)
+    logger.debug("Speed: %.2f req/s", total_requests / elapsed if elapsed > 0 else 0)
+    logger.debug("Total checked: %d", total_requests)
 
     return valid_ticks
 

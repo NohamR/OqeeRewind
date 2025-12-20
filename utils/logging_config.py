@@ -1,9 +1,11 @@
+"""Logging configuration for OqeeRewind."""
+
 import logging
 import sys
 
 class ColoredFormatter(logging.Formatter):
     """Custom logging formatter to add colors to log levels."""
-    
+
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
@@ -27,8 +29,8 @@ class ColoredFormatter(logging.Formatter):
 
 def setup_logging(level=logging.INFO):
     """Set up logging configuration."""
-    logger = logging.getLogger("OqeeRewind")
-    logger.setLevel(level)
+    log = logging.getLogger("OqeeRewind")
+    log.setLevel(level)
 
     # Create console handler
     console_handler = logging.StreamHandler(sys.stdout)
@@ -39,10 +41,10 @@ def setup_logging(level=logging.INFO):
     console_handler.setFormatter(formatter)
 
     # Add handler to logger
-    if not logger.handlers:
-        logger.addHandler(console_handler)
+    if not log.handlers:
+        log.addHandler(console_handler)
 
-    return logger
+    return log
 
 # Create a default logger instance
 logger = logging.getLogger("OqeeRewind")

@@ -173,15 +173,15 @@ if __name__ == "__main__":
                 logger.error("Error during stream selection.")
                 sys.exit(1)
 
-            logger.info(f"Start date: {start_date}")
-            logger.info(f"End date: {end_date}")
-            logger.info(f"Channel ID: {args.channel_id}")
-            logger.info(f"Video quality: {args.video}")
-            logger.info(f"Audio track: {args.audio}")
-            logger.info(f"Title: {title}")
-            logger.info(f"DRM keys: {keys}")
-            logger.info(f"Output dir: {args.output_dir}")
-            logger.info(f"Widevine device: {args.widevine_device}")
+            logger.debug("Start date: %s", start_date)
+            logger.debug("End date: %s", end_date)
+            logger.debug("Channel ID: %s", args.channel_id)
+            logger.debug("Video quality: %s", args.video)
+            logger.debug("Audio track: %s", args.audio)
+            logger.debug("Title: %s", title)
+            logger.debug("DRM keys: %s", keys)
+            logger.debug("Output dir: %s", args.output_dir)
+            logger.debug("Widevine device: %s", args.widevine_device)
 
         else:
             # Interactive mode
@@ -255,7 +255,7 @@ if __name__ == "__main__":
                 )
 
             rep_nb = (end_tick - start_tick) // DURATION + 1
-            logger.info(f"Total segments to fetch for {content_type}: {rep_nb}")
+            logger.info("Total segments to fetch for %s: %d", content_type, rep_nb)
             data = {
                 "start_tick": start_tick,
                 "rep_nb": rep_nb,
@@ -296,7 +296,7 @@ if __name__ == "__main__":
                     key = k
                     break
             if not key:
-                logger.info(f"No key found for KID {kid}, need to fetch it.")
+                logger.info("No key found for KID %s, need to fetch it.", kid)
                 missing_keys.append(kid)
 
         if len(missing_keys) > 0:
@@ -317,7 +317,7 @@ if __name__ == "__main__":
                 }
 
             fetched_keys = get_keys(kids=missing_keys, method=method)
-            logger.info(f"Fetched keys: {fetched_keys}")
+            logger.info("Fetched keys: %s", fetched_keys)
             keys = keys + fetched_keys
 
         for content_type, data in [("video", video_data), ("audio", audio_data)]:
@@ -347,7 +347,7 @@ if __name__ == "__main__":
             f'ffmpeg -i "concat:{output_dir}/segments_{track_id_video}/init.mp4|'
             f'{output_dir}/dec_video.mp4" -c copy {output_dir}/video.mp4'
         )
-        logger.debug(f"FFmpeg command: {command_ffmpeg}")
+        logger.debug("FFmpeg command: %s", command_ffmpeg)
         subprocess.run(
             command_ffmpeg,
             shell=True,
@@ -360,7 +360,7 @@ if __name__ == "__main__":
             f'{output_dir}/dec_audio.mp4" -c copy {output_dir}/audio.mp4'
         )
 
-        logger.debug(f"FFmpeg command: {command_ffmpeg}")
+        logger.debug("FFmpeg command: %s", command_ffmpeg)
         subprocess.run(
             command_ffmpeg,
             shell=True,
@@ -373,7 +373,7 @@ if __name__ == "__main__":
             f"ffmpeg -i {output_dir}/video.mp4 -itsoffset {diff_start_sec} "
             f"-i {output_dir}/audio.mp4 -c copy -map 0:v -map 1:a {output_dir}/output.mp4"
         )
-        logger.debug(f"Merge command: {COMMAND_MERGE}")
+        logger.debug("Merge command: %s", COMMAND_MERGE)
         subprocess.run(
             COMMAND_MERGE,
             shell=True,
@@ -384,7 +384,7 @@ if __name__ == "__main__":
 
         FINAL_OUTPUT = f"{output_dir}/{title}.mp4"
         shutil.move(f"{output_dir}/output.mp4", FINAL_OUTPUT)
-        logger.info(f"Final output saved to {FINAL_OUTPUT}")
+        logger.info("Final output saved to %s", FINAL_OUTPUT)
 
         os.remove(f"{output_dir}/dec_video.mp4")
         os.remove(f"{output_dir}/dec_audio.mp4")

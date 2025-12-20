@@ -24,7 +24,11 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
 
         # Base headers template for API requests
         self._headers_template = {
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/avif,image/webp,image/apng,*/*;q=0.8,"
+                "application/signed-exchange;v=b3;q=0.7"
+            ),
             "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
             "cache-control": "no-cache",
             "pragma": "no-cache",
@@ -37,7 +41,11 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             "sec-fetch-site": "none",
             "sec-fetch-user": "?1",
             "upgrade-insecure-requests": "1",
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            "user-agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/144.0.0.0 Safari/537.36"
+            ),
         }
         self.headers_base = self._build_headers()
 
@@ -128,7 +136,11 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
                 "pragma": "no-cache",
                 "priority": "u=1, i",
                 "sec-ch-ua": '"Brave";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "user-agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/131.0.0.0 Safari/537.36"
+                ),
                 "x-oqee-customization": "0",
             }
         )
@@ -143,7 +155,10 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         state = r["state"][0]
 
         headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9, image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9, "
+                "image/avif,image/webp,image/apng,*/*;q=0.8"
+            ),
             "Accept-Language": "fr-FR,fr;q=0.7",
             "Cache-Control": "max-age=0",
             "Connection": "keep-alive",
@@ -156,7 +171,11 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             "Sec-Fetch-User": "?1",
             "Sec-GPC": "1",
             "Upgrade-Insecure-Requests": "1",
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "user-agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/131.0.0.0 Safari/537.36"
+            ),
             "sec-ch-ua": '"Brave";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"macOS"',
@@ -216,7 +235,9 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             try:
                 self.access_token = self.login_cred(username, password)
             except ValueError as e:
-                logger.warning(f"Credential login failed: {e}. Falling back to IP login.")
+                logger.warning(
+                    "Credential login failed: %s. Falling back to IP login.", e
+                )
                 self.access_token = self.login_ip()
 
         logger.info("Fetching rights token")

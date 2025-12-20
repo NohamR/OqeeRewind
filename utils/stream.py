@@ -5,7 +5,6 @@ import base64
 import os
 import asyncio
 import time
-import subprocess
 from typing import Dict, Any
 
 import requests
@@ -317,12 +316,16 @@ def get_manifest(manifest_id):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "cross-site",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "user-agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/143.0.0.0 Safari/537.36"
+        ),
     }
 
     format_id = 1
     url = (
-        f"https://api-proxad.dc2.oqee.net/playlist/v1/live/"
+        "https://api-proxad.dc2.oqee.net/playlist/v1/live/"
         f"{manifest_id}/{format_id}/live.mpd"
     )
     response = requests.get(url, headers=headers, timeout=10)
@@ -344,7 +347,11 @@ async def fetch_segment(session, ticks, track_id):
     headers = {
         "Accept": "*/*",
         "Referer": "https://tv.free.fr/",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/143.0.0.0 Safari/537.36"
+        ),
     }
     try:
         async with session.get(url, headers=headers) as resp:
@@ -366,7 +373,11 @@ def get_init(output_folder, track_id):
     headers = {
         "Accept": "*/*",
         "Referer": "https://tv.free.fr/",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/143.0.0.0 Safari/537.36"
+        ),
     }
     response = requests.get(url, headers=headers, timeout=10)
     if response.status_code == 200:
@@ -374,7 +385,7 @@ def get_init(output_folder, track_id):
         init_path = f"{output_folder}/segments_{track_id}/init.mp4"
         with open(init_path, "wb") as f:
             f.write(response.content)
-        logger.debug(f"Saved initialization segment to {init_path}")
+        logger.debug("Saved initialization segment to %s", init_path)
     return init_path
 
 
@@ -395,7 +406,11 @@ async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
         headers = {
             "Accept": "*/*",
             "Referer": "https://tv.free.fr/",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/143.0.0.0 Safari/537.36"
+            ),
         }
         try:
             async with session.get(url, headers=headers) as resp:
@@ -406,21 +421,19 @@ async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
                         f.write(content)
                     return True
                 logger.error(
-                    f"Failed to download segment {rep} (tick {tick}): "
-                    f"HTTP {resp.status}"
+                    "Failed to download segment %d (tick %d): HTTP %d",
+                    rep, tick, resp.status
                 )
                 return False
         except aiohttp.ClientError as e:
-            logger.warning(f"Error downloading segment {rep} (tick {tick}): {e}")
+            logger.warning("Error downloading segment %d (tick %d): %s", rep, tick, e)
             return False
 
-    logger.info(f"Starting download of {rep_nb} segments...")
-    logger.debug(f"Track ID: {track_id}")
-    logger.debug(f"Base tick: {start_tick}")
+    logger.info("Starting download of %d segments...", rep_nb)
+    logger.debug("Track ID: %s", track_id)
+    logger.debug("Base tick: %d", start_tick)
 
     start_time = time.time()
-    successful = 0
-    failed = 0
 
     async with aiohttp.ClientSession() as session:
         tasks = []
@@ -438,13 +451,12 @@ async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
             result = await coro
             results.append(result)
         successful = sum(1 for r in results if r is True)
-        failed = rep_nb - successful
 
     end_time = time.time()
     elapsed = end_time - start_time
 
-    logger.debug(f"Download completed in {elapsed:.2f}s")
-    logger.info(f"Files saved to {output_folder}/segments_{track_id}/")
+    logger.debug("Download completed in %.2fs", elapsed)
+    logger.info("Files saved to %s/segments_%s/", output_folder, track_id)
 
 
 def get_kid(output_folder, track_id):
@@ -461,7 +473,7 @@ def get_kid(output_folder, track_id):
     for filename in os.listdir(folder):
         if filename.endswith(".m4s"):
             filepath = os.path.join(folder, filename)
-            logger.debug(f"Checking file: {filepath}")
+            logger.debug("Checking file: %s", filepath)
             with open(filepath, "rb") as f:
                 data = f.read()
                 # Pattern before KID

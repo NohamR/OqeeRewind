@@ -20,10 +20,10 @@ def verify_mp4ff():
 def verify_cmd(path: str) -> bool:
     """Verify if the file provided at path is valid and exists, otherwise log error and exit."""
     if not os.path.exists(path):
-        logger.error(f"File does not exist: {path}")
+        logger.error("File does not exist: %s", path)
         sys.exit(1)
     if not os.path.isfile(path):
-        logger.error(f"Path is not a file: {path}")
+        logger.error("Path is not a file: %s", path)
         sys.exit(1)
     return True
 
@@ -40,7 +40,7 @@ def merge_segments(input_folder: str, track_id: str, output_file: str):
         for fname in segment_files:
             with open(f"{segment_folder}/{fname}", "rb") as infile:
                 outfile.write(infile.read())
-    logger.info(f"Merged segments into {output_file}")
+    logger.info("Merged segments into %s", output_file)
 
 
 def decrypt(input_file, init_path, output_file, key):
@@ -63,7 +63,7 @@ def decrypt(input_file, init_path, output_file, key):
         check=False,
     )
     if result.returncode == 0:
-        logger.info(f"Decrypted {input_file} to {output_file}")
+        logger.info("Decrypted %s to %s", input_file, output_file)
         return True
-    logger.error(f"Decryption failed: {result.stderr}")
+    logger.error("Decryption failed: %s", result.stderr)
     return False
