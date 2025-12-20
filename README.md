@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="docs/images/logo.png" width="64"> <a href="https://github.com/NohamR/OqeeRewind">OqeeRewind</a>
+    <img src="docs/images/logo_bg.png" width="256"> <a href="https://github.com/NohamR/OqeeRewind">OqeeRewind</a>
     <br/>
     <sup><em>Oqee TV Live Downloader</em></sup>
 </p>
@@ -12,8 +12,6 @@
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Onyx-Nostalgia/uv/refs/heads/fix/logo-badge/assets/badge/v0.json" alt="Manager: uv">
     </a>
 </p>
-
-# OqeeRewind - Oqee TV Live Downloader
 
 ## Legal Warning
 
