@@ -56,7 +56,6 @@ API_URL=https://example.com/get-cached-keys
 ### Interactive Mode
 If you run the script without arguments, it will guide you through channel selection and date picking.
 
-**Using uv:**
 ```bash
 uv run main.py
 ```
