@@ -59,6 +59,8 @@ If you run the script without arguments, it will guide you through channel selec
 ```bash
 uv run main.py
 ```
+https://github.com/user-attachments/assets/54a50828-c0e9-4a29-81c7-e188c238a998
+
 
 ### CLI Mode
 You can automate the download by providing arguments.
@@ -89,6 +91,8 @@ options:
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Set the logging level (default: INFO)
 ```
+https://github.com/user-attachments/assets/cc76990a-3d13-4be1-bb3c-ba8d87e6eaba
+
 
 #### Examples
 
