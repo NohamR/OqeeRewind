@@ -333,6 +333,109 @@ def stream_selection():
     return None
 
 
+def get_selection(channel_id, video_quality='best', audio_quality='best'):
+    """Get stream selection for a given channel ID with specified qualities.
+
+    Args:
+        channel_id (str): The channel ID to select streams for.
+        video_quality (str): Video quality selection ('best', '1080+best', '720+worst', etc.).
+        audio_quality (str): Audio quality selection ('best', 'fra+best', etc.).
+
+    Returns:
+        dict: Dictionary of selected streams by content type, or None if error.
+    """
+    # Fetch channel details
+    api_url = SERVICE_PLAN_API_URL
+    try:
+        response = requests.get(api_url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if not data.get("success") or "channels" not in data.get("result", {}):
+            print("Erreur: Impossible de récupérer les détails de la chaîne.")
+            return None
+
+        channels_data = data["result"]["channels"]
+        selected_channel_details = channels_data.get(str(channel_id))
+        if not selected_channel_details:
+            print(f"Chaîne avec ID {channel_id} non trouvée.")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur réseau : {e}")
+        return None
+    except ValueError:
+        print("Erreur lors de l'analyse de la réponse JSON.")
+        return None
+
+    print(f"Chaîne sélectionnée : {selected_channel_details.get('name')} (ID: {channel_id})")
+
+    dash_id = selected_channel_details.get('streams', {}).get('dash')
+    if not dash_id:
+        print("Aucun flux DASH trouvé pour cette chaîne.")
+        return None
+
+    mpd_content = get_manifest(dash_id)
+    manifest_info = parse_mpd_manifest(mpd_content)
+    organized_info = organize_by_content_type(manifest_info)
+
+    final_selections = {}
+    final_selections['channel'] = selected_channel_details
+
+    # Select video
+    if 'video' in organized_info:
+        selected_track = select_track(organized_info['video'], video_quality, 'video')
+        if selected_track:
+            final_selections['video'] = selected_track
+
+    # Select audio
+    if 'audio' in organized_info:
+        selected_track = select_track(organized_info['audio'], audio_quality, 'audio')
+        if selected_track:
+            final_selections['audio'] = selected_track
+
+    return final_selections
+
+
+def select_track(content_dict, quality_spec, content_type):
+    """Select a track based on quality specification.
+
+    Args:
+        content_dict (dict): Organized content dict (video or audio).
+        quality_spec (str): Quality spec like 'best', '1080+best', 'fra+worst'.
+        content_type (str): 'video' or 'audio'.
+
+    Returns:
+        dict: Selected track or None.
+    """
+    if '+' in quality_spec:
+        filter_part, pref = quality_spec.split('+', 1)
+        pref = pref.lower()
+    else:
+        filter_part = ''
+        pref = quality_spec.lower()
+
+    candidates = []
+    for key, tracks in content_dict.items():
+        if filter_part and filter_part.lower() not in key.lower():
+            continue
+        candidates.extend(tracks)
+
+    if not candidates:
+        print(f"Aucune piste {content_type} trouvée pour '{quality_spec}'.")
+        return None
+
+    if pref == 'best':
+        selected = max(candidates, key=lambda x: x['bandwidth'])
+    elif pref == 'worst':
+        selected = min(candidates, key=lambda x: x['bandwidth'])
+    else:
+        # Default to best if unknown pref
+        selected = max(candidates, key=lambda x: x['bandwidth'])
+
+    print(f"{content_type.capitalize()} sélectionnée : {selected['track_id']}, {selected['bitrate_kbps']} kbps")
+    return selected
+
+
 def get_epg_data_at(dt: datetime.datetime):
     """
     Fetch EPG data from the Oqee API for the nearest aligned hour of a given datetime.

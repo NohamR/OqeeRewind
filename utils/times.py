@@ -54,10 +54,9 @@ async def bruteforce(track_id, date):
     batch_size = 20000
     checked_count = 0
     
-    print(f"\n🚀 Starting bruteforce...")
-    print(f"📦 Track ID: {track_id}")
-    print(f"🎯 Total ticks to check: {total_requests}")
-    print(f"{'='*50}\n")
+    print(f"Starting bruteforce for {track_id}")
+    # print(f"🎯 Total ticks to check: {total_requests}")
+    print(f"{'='*50}")
     
     start_time = time.time()
     
@@ -69,7 +68,7 @@ async def bruteforce(track_id, date):
                 batch_end = min(batch_start + batch_size, total_requests)
                 ticks_to_check = list(range(batch_start, batch_end))
                 
-                print(f"\n📦 Batch {batch_num}/{total_batches} (ticks {batch_start} to {batch_end})")
+                # print(f"\n📦 Batch {batch_num}/{total_batches} (ticks {batch_start} to {batch_end})")
                 
                 tasks = [fetch_segment(session, t + date, track_id) for t in ticks_to_check]
                 
@@ -86,7 +85,7 @@ async def bruteforce(track_id, date):
                 
                 # Stop if we found valid ticks
                 if valid_ticks:
-                    print(f"\n✅ Found {len(valid_ticks)} valid tick(s)!")
+                    print(f"Found valid ticks: {valid_ticks}, stopping bruteforce.")
                     break
                         
     except KeyboardInterrupt:
@@ -100,17 +99,14 @@ async def bruteforce(track_id, date):
     print(f"✅ Completed in {elapsed:.2f}s")
     print(f"⚡ Speed: {req_per_sec:.2f} req/s")
     print(f"📊 Total checked: {checked_count}/{total_requests}")
-    if valid_ticks:
-        print(f"📍 Valid ticks: {valid_ticks}")
     print(f"{'='*50}")
     
     return valid_ticks
 
 
-def find_nearest_tick_by_hour(base_tick, datetime_str, timescale, duration, offset_hours=1):
+def find_nearest_tick_by_hour(base_tick, datetime, timescale, duration, offset_hours=1):
     """Find the nearest tick for a given datetime."""
-    dt = datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-    target_ticks = convert_date_to_ticks(dt, timescale, offset_hours)
+    target_ticks = convert_date_to_ticks(datetime, timescale, offset_hours)
     diff_ticks = base_tick - target_ticks
     rep_estimate = diff_ticks / duration
 
@@ -128,10 +124,10 @@ def find_nearest_tick_by_hour(base_tick, datetime_str, timescale, duration, offs
     target_seconds = convert_ticks_to_sec(target_ticks, timescale)
     delta_seconds = abs(nearest_seconds - target_seconds)
 
-    print(f"Requested datetime: {dt} (offset +{offset_hours}h)")
-    print(f"Nearest rep: {rep}")
-    print(f"Tick: {nearest_tick}")
-    print(f"Date: {convert_sec_to_date(nearest_seconds, offset_hours)}")
-    print(f"Difference: {delta_seconds:.2f} seconds")
+    # print(f"Requested datetime: {datetime} (offset +{offset_hours}h)")
+    # print(f"Nearest rep: {rep}")
+    # print(f"Tick: {nearest_tick}")
+    # print(f"Date: {convert_sec_to_date(nearest_seconds, offset_hours)}")
+    # print(f"Difference: {delta_seconds:.2f} seconds")
 
     return nearest_tick, rep

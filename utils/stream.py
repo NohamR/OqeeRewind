@@ -4,54 +4,12 @@ import base64
 import os
 import asyncio
 import time
+import subprocess
 from typing import Dict, Any
-from uuid import UUID
 
 import requests
-from dotenv import load_dotenv
 import aiohttp
-from pywidevine.pssh import PSSH
-
-load_dotenv()
-
-
-def fetch_drm_keys(kid: str) -> str:
-    """Fetch DRM keys for a given KID.
-
-    Args:
-        kid: The key identifier string.
-
-    Returns:
-        The DRM key as a string.
-    """
-    headers = {
-        'Content-Type': 'application/json',
-        'Api-Key': os.getenv("API_KEY"),
-    }
-    data = {"service": "oqee", "kid": kid}
-    response = requests.post(
-        os.getenv("API_URL"), headers=headers, json=data, timeout=10
-    )
-    return response.json()["key"]
-
-
-def generate_pssh(kid: str) -> str:
-    """Generate a PSSH box for a given KID.
-
-    Args:
-        kid: The key identifier string.
-    
-    Returns:
-        The PSSH box as a base64-encoded string.
-    """
-    default_pssh = (
-        "AAAAiHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAGgIARIQrKzUjhLvvbqkebbW2/EQtBIQ"
-        "WxKIsxtqP3iaIFYUu9f6xxIQXn4atxoopds39jbUXbiFVBIQUUJpv9uuzWKv4ccKTtooMRIQ"
-        "ocf9FUFCoGm775zPIBr3HRoAKgAyADgASABQAA=="
-    )
-    pssh = PSSH(default_pssh)
-    pssh.set_key_ids([UUID(kid.replace("-", "").lower())])
-    return pssh.dumps()
+from tqdm.asyncio import tqdm
 
 
 def parse_mpd_manifest(mpd_content: str) -> Dict[str, Any]:
@@ -206,9 +164,9 @@ def parse_representation(
         if segment_timeline is not None:
             for s_element in segment_timeline.findall('mpd:S', namespaces):
                 timeline_info = {
-                    't': s_element.get('t'),  # start time
-                    'd': s_element.get('d'),  # duration
-                    'r': s_element.get('r')   # repeat count
+                    't': int(s_element.get('t')) if s_element.get('t') is not None else 0,  # start time
+                    'd': int(s_element.get('d')) if s_element.get('d') is not None else 0,  # duration
+                    'r': int(s_element.get('r')) if s_element.get('r') is not None else 0  # repeat count
                 }
                 rep_info['segments']['timeline'].append(timeline_info)
 
@@ -228,12 +186,12 @@ def organize_by_content_type(manifest_info: Dict[str, Any]) -> Dict[str, Any]:
     organized = {
         'video': {},
         'audio': {},
-        'text': {},
-        'manifest_metadata': {
-            'type': manifest_info.get('type'),
-            'publishTime': manifest_info.get('publishTime'),
-            'minBufferTime': manifest_info.get('minBufferTime'),
-        }
+        # 'text': {},
+        # 'manifest_metadata': {
+        #     'type': manifest_info.get('type'),
+        #     'publishTime': manifest_info.get('publishTime'),
+        #     'minBufferTime': manifest_info.get('minBufferTime'),
+        # }
     }
 
     for period in manifest_info.get('periods', []):
@@ -288,19 +246,19 @@ def organize_by_content_type(manifest_info: Dict[str, Any]) -> Dict[str, Any]:
                         organized['audio'][lang_key] = []
                     organized['audio'][lang_key].append(track_info)
 
-                elif content_type == 'text':
-                    lang = adaptation_set.get('lang', 'unknown')
-                    role = adaptation_set.get('role', 'caption')
+                # elif content_type == 'text':
+                #     lang = adaptation_set.get('lang', 'unknown')
+                #     role = adaptation_set.get('role', 'caption')
 
-                    track_info.update({
-                        'language': lang,
-                        'role': role,
-                    })
+                #     track_info.update({
+                #         'language': lang,
+                #         'role': role,
+                #     })
 
-                    lang_key = f"{lang}_{role}"
-                    if lang_key not in organized['text']:
-                        organized['text'][lang_key] = []
-                    organized['text'][lang_key].append(track_info)
+                #     lang_key = f"{lang}_{role}"
+                #     if lang_key not in organized['text']:
+                #         organized['text'][lang_key] = []
+                #     organized['text'][lang_key].append(track_info)
 
     # Sort video tracks by resolution (descending) and then by bitrate (descending)
     for resolution in organized['video']:
@@ -388,10 +346,11 @@ async def fetch_segment(session, ticks, track_id):
     except aiohttp.ClientError:
         return None
 
-def get_init(track_id):
+def get_init(output_folder, track_id):
     """Download and save the initialization segment for a track.
 
     Args:
+        output_folder: The output folder path.
         track_id: The track identifier.
     """
     url = f"https://media.stream.proxad.net/media/{track_id}_init"
@@ -402,12 +361,15 @@ def get_init(track_id):
     }
     response = requests.get(url, headers=headers, timeout=10)
     if response.status_code == 200:
-        with open(f'segments/segments_{track_id}/init.mp4', 'wb') as f:
+        os.makedirs(f'{output_folder}/segments_{track_id}', exist_ok=True)
+        init_path = f'{output_folder}/segments_{track_id}/init.mp4'
+        with open(init_path, 'wb') as f:
             f.write(response.content)
-        print(f"✅ Saved initialization segment to init_{track_id}.mp4")
+        print(f"✅ Saved initialization segment to {init_path}")
+    return init_path
 
 
-async def save_segments(track_id, start_tick, rep_nb, duration):
+async def save_segments(output_folder, track_id, start_tick, rep_nb, duration):
     """Download and save multiple media segments.
 
     Args:
@@ -416,7 +378,7 @@ async def save_segments(track_id, start_tick, rep_nb, duration):
         rep_nb: The number of segments to download.
         duration: The duration per segment.
     """
-    os.makedirs(f'segments/segments_{track_id}', exist_ok=True)
+    os.makedirs(f'{output_folder}/segments_{track_id}', exist_ok=True)
 
     async def download_segment(session, tick, rep):
         """Download a single segment."""
@@ -430,12 +392,9 @@ async def save_segments(track_id, start_tick, rep_nb, duration):
             async with session.get(url, headers=headers) as resp:
                 if resp.status == 200:
                     content = await resp.read()
-                    filename = f"segments/segments_{track_id}/{tick}.m4s"
+                    filename = f"{output_folder}/segments_{track_id}/{tick}.m4s"
                     with open(filename, 'wb') as f:
                         f.write(content)
-                    print(
-                        f"✅ Saved segment {rep} (tick {tick}) to {filename}"
-                    )
                     return True
                 print(
                     f"❌ Failed to download segment {rep} (tick {tick}): "
@@ -446,10 +405,10 @@ async def save_segments(track_id, start_tick, rep_nb, duration):
             print(f"⚠️ Error downloading segment {rep} (tick {tick}): {e}")
             return False
 
-    print(f"\n🎬 Starting download of {rep_nb} segments...")
+    print(f"Starting download of {rep_nb} segments...")
     print(f"📦 Track ID: {track_id}")
     print(f"🎯 Base tick: {start_tick}")
-    print(f"{'='*50}\n")
+    print(f"{'='*50}")
 
     start_time = time.time()
     successful = 0
@@ -461,31 +420,33 @@ async def save_segments(track_id, start_tick, rep_nb, duration):
             tick = start_tick + i * duration
             tasks.append(download_segment(session, tick, i))
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = []
+        for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Downloading segments", unit="seg"):
+            result = await coro
+            results.append(result)
         successful = sum(1 for r in results if r is True)
         failed = rep_nb - successful
 
     end_time = time.time()
     elapsed = end_time - start_time
 
-    print(f"\n{'='*50}")
+    print(f"{'='*50}")
     print(f"✅ Download completed in {elapsed:.2f}s")
-    print(f"📊 Successful: {successful}/{rep_nb}")
-    print(f"❌ Failed: {failed}/{rep_nb}")
-    print(f"💾 Files saved to segments_{track_id}/")
+    print(f"💾 Files saved to {output_folder}/segments_{track_id}/")
     print(f"{'='*50}")
 
 
-def get_kid(track_id):
+def get_kid(output_folder, track_id):
     """Extract the Key ID (KID) from downloaded segments.
 
     Args:
+        output_folder: The output folder path.
         track_id: The track identifier.
 
     Returns:
         The KID as a hex string if found, None otherwise.
     """
-    folder = f'segments/segments_{track_id}'
+    folder = f'{output_folder}/segments_{track_id}'
     for filename in os.listdir(folder):
         if filename.endswith('.m4s'):
             filepath = os.path.join(folder, filename)

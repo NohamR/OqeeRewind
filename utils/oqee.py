@@ -1,28 +1,11 @@
 """OQEE streaming service client for authentication and content access."""
 import base64
-import logging
-import os
 from urllib.parse import urlparse, parse_qs
+import requests
 
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-class _LoggerProxy:
-    """Lightweight logger helper that returns exceptions for raise statements."""
-
-    def __init__(self, name: str):
-        self._logger = logging.getLogger(name)
-
-    def info(self, message: str):
-        """Log an info message."""
-        self._logger.info(message)
-
-    def error(self, message: str) -> RuntimeError:
-        """Log an error message and return a RuntimeError."""
-        self._logger.error(message)
-        return RuntimeError(message)
 
 class OqeeClient:  # pylint: disable=too-many-instance-attributes
     """
@@ -32,12 +15,9 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
     Security: 1080p@L1 720@L3
     """
 
-    def __init__(self, ctx, movie, title):
-        super().__init__(ctx)
-        self.session = None  # Will be set by parent class
-        self.log = _LoggerProxy(self.__class__.__name__)
-        self.movie = movie
-        self.title, self.typecontent = self.parse_title(title)
+    def __init__(self, username: str, password: str):
+        super().__init__()
+        self.session = requests.Session()
 
         # Base headers template for API requests
         self._headers_template = {
@@ -67,148 +47,9 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         self.access_token = None
         self.right_token = None
         self.profil_id = None
-        self.lic_url = None
+        self.lic_url = "https://license.oqee.net/api/v1/live/license/widevine"
 
-        self.configure()
-
-
-    def parse_title(self, title):
-        """
-        Parse and categorize different types of OQEE TV URLs.
-        Args:
-            title (str): The URL or title string to parse. Can be a full OQEE TV URL or a partial path.
-        Returns:
-            tuple or str: If the URL matches a known pattern, returns a tuple of (content_id, content_type).
-                         If no pattern matches, returns the original title string.
-        """
-        if title is None:
-            raise self.log.error("No title provided.")
-
-        title = title.replace("https://oqee.tv", "").replace("/play", "")
-        if title.startswith("/replay_collection/"):
-            return (
-                title.replace("/replay_collection/", "").replace("/all", ""),
-                "replay_collection"
-            )
-        if title.startswith("/vod/contents/"):
-            return title.replace("/vod/contents/", ""), "vod"
-        if title.startswith("/svod/portal/"):
-            return title.replace("/svod/portal/", "").split("/")[1],  "vod"
-        if title.startswith("/replay/"):
-            return title.replace("/replay/", ""), "replay"
-        return title
-
-
-    def _extract_title_id(self, title):
-        """Return a usable identifier regardless of input structure."""
-        if title is None:
-            raise self.log.error("Title identifier is required")
-        if isinstance(title, dict):
-            return title.get('id') or title.get('program_id') or title.get('content_id')
-        return getattr(title, 'id', title)
-
-
-    def get_vod(self, title):
-        """Fetch VOD playback information and return the raw API response."""
-        title_id = self._extract_title_id(title)
-        data = {
-            "supported_stream_types": ["dash"],
-            "supported_drms": ["widevine"],
-            "supported_ciphers": ["cbcs", "cenc"],
-            "supported_ads": ["vast", "vmap"],
-        }
-        response = self.session.post(
-            f'https://api.oqee.net/api/v1/svod/offers/{title_id}/playback_infos',
-            headers=self.headers_auth,
-            json=data,
-        ).json()
-        self.lic_url = response['result']['license_server']
-        return response
-
-
-    def get_vod_info(self):
-        """Return the raw VOD metadata payload for the current title."""
-        response = self.session.get(
-            f'https://api.oqee.net/api/v3/vod/contents/{self.title}',
-            headers=self.headers_base,
-        ).json()
-        if response['success'] is False:
-            raise self.log.error(f"Failed to get the replay: {response['message']}")
-        return response
-
-
-    def get_replay(self, title):
-        """Fetch replay playback information and return the raw API response."""
-        title_id = self._extract_title_id(title)
-        payload = {
-            'program_id': title_id,
-            'supported_stream_types': ['dash'],
-            'supported_drms': ['widevine'],
-            'supported_ciphers': ['cenc'],
-            'supported_subs': ['ttml', 'vtt'],
-            'supported_ads': ['vast', 'vmap'],
-        }
-        response = self.session.post(
-            f'https://api.oqee.net/api/v1/replay/programs/{title_id}/playback_infos',
-            headers=self.headers_auth,
-            json=payload,
-        ).json()
-        if response['success'] is False:
-            raise self.log.error(f"Failed to get the replay: {response['message']}")
-        self.lic_url = response['result']['license_server']
-        return response
-
-
-    def get_replay_info(self):
-        """
-        Retrieve replay information for a given title from the OQEE API.
-        """
-        response = self.session.get(
-            f'https://api.oqee.net/api/v2/replay/programs/{self.title}',
-            headers=self.headers_base,
-        ).json()
-        if response['success'] is False:
-            raise self.log.error(f"Failed to get the replay: {response['message']}")
-        if response['result']['type'] != 'replay':
-            raise self.log.error(f"Provided ID is not a replay: {response['type']}")
-        return response
-
-
-    def get_replay_collection(self):
-        """Retrieve replay collection information from Oqee API and return the raw response."""
-        response = self.session.get(
-            f'https://api.oqee.net/api/v2/pages/replay_collection/{self.title}',
-            headers=self.headers_base,
-        ).json()
-        if response['success'] is False:
-            raise self.log.error(f"Failed to get the replay: {response['message']}")
-        if response['result']['type'] != 'collection':
-            raise self.log.error(f"Provided ID is not a collection: {response['type']}")
-        return response
-
-
-    def get_titles(self):
-        """
-        Get title information based on content type.
-        """
-        if self.typecontent == "replay":
-            return self.get_replay_info()
-        if self.typecontent == "vod":
-            return self.get_vod_info()
-        if self.typecontent == "replay_collection":
-            return self.get_replay_collection()
-        return None
-
-
-    def get_tracks(self, title):
-        """
-        Get track information based on content type.
-        """
-        if self.typecontent in ("replay", "replay_collection"):
-            return self.get_replay(title)
-        if self.typecontent == "vod":
-            return self.get_vod(title)
-        return None
+        self.configure(username, password)
 
 
     def certificate(self, **_):
@@ -233,15 +74,16 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             headers=self.headers_auth,
             json={'licenseRequest': license_request}
         )
+        if not response.json()["success"]:
+            raise ValueError(f"License request failed: {response.json()['error']['msg']}")
         return response.json()['result']['license']
 
 
-    def configure(self):
+    def configure(self, username, password):
         """Configure the client by logging in and processing title information."""
-        self.log.info("Logging in")
-        self.login()
-        self.log.info(f"Processing title ID based on provided path: {self.title}")
-        self.log.info(f"Obtained the {self.typecontent}: {self.title}")
+        print("Logging in")
+        self.login(username, password)
+
 
     def _build_headers(self, overrides=None, remove=None):
         """Clone default headers and apply optional overrides/removals."""
@@ -279,7 +121,7 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             'https://api.oqee.net/api/v2/user/profiles',
             headers=headers
         ).json()
-        self.log.info("Selecting first profile by default.")
+        print("Selecting first profile by default.")
         return data['result'][0]['id']
 
 
@@ -333,6 +175,8 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         }
         r = self.session.post('https://subscribe.free.fr/auth/auth.pl', headers=headers, data=data)
         parsed_url = parse_qs(urlparse(r.url).query)
+        if 'result' not in parsed_url:
+            raise ValueError("Login failed: invalid credentials or error in authentication")
         token = parsed_url['result'][0]
 
         headers = self._build_headers(
@@ -364,23 +208,24 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         return data['result']['token']
 
 
-    def login(self):
+    def login(self, username, password):
         """
         Log in to the Oqee service and set up necessary tokens and headers.
         """
-        username = os.getenv("OQEE_USERNAME")
-        password = os.getenv("OQEE_PASSWORD")
-
         if not username or not password:
-            self.log.info("No environment credentials found, using IP login by default.")
+            print("No credentials provided, using IP login.")
             self.access_token = self.login_ip()
         else:
-            self.log.info("Logging in with credentials sourced from environment variables")
-            self.access_token = self.login_cred(username, password)
+            print("Logging in with provided credentials")
+            try:
+                self.access_token = self.login_cred(username, password)
+            except ValueError as e:
+                print(f"Credential login failed: {e}. Falling back to IP login.")
+                self.access_token = self.login_ip()
 
-        self.log.info("Fetching rights token")
+        print("Fetching rights token")
         self.right_token = self.right()
-        self.log.info("Fetching profile ID")
+        print("Fetching profile ID")
         self.profil_id = self.profil()
 
         self.headers = self._build_headers(overrides={
