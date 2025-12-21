@@ -413,8 +413,22 @@ def select_track(content_dict, quality_spec, content_type):
 
     candidates = []
     for key, tracks in content_dict.items():
-        if filter_part and filter_part.lower() not in key.lower():
-            continue
+        if filter_part:
+            should_skip = True
+            if content_type == "video" and "x" in key:
+                # For video, check height
+                try:
+                    _, height = key.split("x")
+                    if filter_part.endswith("p"):
+                        target_height = filter_part[:-1]
+                    else:
+                        target_height = filter_part
+                    if target_height in height:
+                        should_skip = False
+                except ValueError:
+                    pass
+            if should_skip and filter_part.lower() not in key.lower():
+                continue
         candidates.extend(tracks)
 
     if not candidates:

@@ -19,6 +19,7 @@ def fetch_drm_keys(kid: str, api_url: str, api_key: str) -> str:
     }
     data = {"service": "oqee", "kid": kid}
     response = requests.post(api_url, headers=headers, json=data, timeout=10)
+    response.raise_for_status()
     return response.json()["key"]
 
 
