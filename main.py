@@ -86,6 +86,12 @@ def parse_arguments():
         help="Path to Widevine device file (default: ./widevine/device.wvd)",
     )
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=20000,
+        help="Batch size for bruteforce (default: 20000)",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
@@ -182,6 +188,7 @@ if __name__ == "__main__":
             logger.debug("DRM keys: %s", keys)
             logger.debug("Output dir: %s", args.output_dir)
             logger.debug("Widevine device: %s", args.widevine_device)
+            logger.debug("Batch size: %d", args.batch_size)
 
         else:
             # Interactive mode
@@ -206,6 +213,7 @@ if __name__ == "__main__":
             title = title or f"{freebox_id}_{start_date.strftime('%Y%m%d_%H%M%S')}"
             keys = []
 
+        batch_size = args.batch_size if cli_mode else 20000
         output_dir = os.getenv("OUTPUT_DIR") or (
             args.output_dir if cli_mode else "./downloads"
         )
@@ -244,7 +252,7 @@ if __name__ == "__main__":
                     "Date mismatch between requested start date and manifest data, bruteforce method is needed."
                 )
 
-                valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user))
+                valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user, batch_size))
                 valid_tick = valid_ticks[0]
 
                 start_tick, start_rep = find_nearest_tick_by_hour(

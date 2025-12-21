@@ -222,3 +222,4 @@ dev_test/
 widevine/
 info.md
 /downloads
+.env.bak

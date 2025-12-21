@@ -90,6 +90,8 @@ options:
                         Output directory for downloaded files (default: ./downloads)
   --widevine-device WIDEVINE_DEVICE
                         Path to Widevine device file (default: ./widevine/device.wvd)
+  --batch-size BATCH_SIZE
+                        Batch size for bruteforce (default: 20000)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Set the logging level (default: INFO)
 ```
@@ -100,7 +102,7 @@ https://github.com/user-attachments/assets/cc76990a-3d13-4be1-bb3c-ba8d87e6eaba
 
 **Download a specific program with duration:**
 ```bash
-uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "01:30:00" --video "1080p+best" --audio "best" --title "MyMovie"
+uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "01:30:00" --video "1080p+best" --audio "best" --title "Record"
 ```
 
 **Download with manual DRM keys:**

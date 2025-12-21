@@ -51,11 +51,10 @@ def future(rep, base, duration):
     return base + rep * duration
 
 
-async def bruteforce(track_id, date):
+async def bruteforce(track_id, date, batch_size=20000):
     """Bruteforce segments to find valid ticks."""
     valid_ticks = []
     total_requests = 288000
-    batch_size = 20000
 
     logger.debug("Starting bruteforce for %s near %s", track_id, date)
 

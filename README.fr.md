@@ -90,6 +90,8 @@ options:
                         Répertoire de sortie pour les fichiers téléchargés (par défaut: ./downloads)
   --widevine-device WIDEVINE_DEVICE
                         Chemin vers le CDM Widevine (par défaut: ./widevine/device.wvd)
+  --batch-size BATCH_SIZE
+                         Nombre de requêtes pour le bruteforce (par défaut: 20000)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Définir le niveau de logging (par défaut: INFO)
 ```
@@ -100,7 +102,7 @@ https://github.com/user-attachments/assets/cc76990a-3d13-4be1-bb3c-ba8d87e6eaba
 
 **Télécharger un programme spécifique avec une durée :**
 ```bash
-uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "01:30:00" --video "1080p+best" --audio "best" --title "MonFilm"
+uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "01:30:00" --video "1080p+best" --audio "best" --title "Enregistrement"
 ```
 
 **Télécharger avec des clés DRM manuelles :**
