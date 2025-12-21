@@ -17,7 +17,7 @@
 
 ## Avertissement Légal
 
-Cette application n'est ni endossée ni affiliée à Oqee. Cette application vous permet de télécharger des vidéos pour une visualisation hors ligne, ce qui peut être interdit par la loi dans votre pays. L'utilisation de cette application peut également entraîner une violation des Conditions d'utilisation entre vous et le fournisseur de flux. Cet outil n'est pas responsable de vos actions ; veuillez prendre une décision éclairée avant d'utiliser cette application.
+Cette application n'est pas affiliée à Oqee. Cette application vous permet de télécharger des vidéos pour une visualisation hors ligne, ce qui peut être interdit par la loi dans votre pays. L'utilisation de cette application peut également entraîner une violation des Conditions d'utilisation entre vous et le fournisseur de flux. Cet outil n'est pas responsable de vos actions ; veuillez prendre une décision éclairée avant d'utiliser cette application.
 
 ## Installation
 
@@ -89,9 +89,9 @@ options:
   --output-dir OUTPUT_DIR
                         Répertoire de sortie pour les fichiers téléchargés (par défaut: ./download)
   --widevine-device WIDEVINE_DEVICE
-                        Chemin vers le fichier de périphérique Widevine (par défaut: ./widevine/device.wvd)
+                        Chemin vers le CDM Widevine (par défaut: ./widevine/device.wvd)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Définir le niveau de journalisation (par défaut: INFO)
+                        Définir le niveau de logging (par défaut: INFO)
 ```
 https://github.com/user-attachments/assets/cc76990a-3d13-4be1-bb3c-ba8d87e6eaba
 
