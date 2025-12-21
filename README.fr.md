@@ -48,7 +48,7 @@ OQEE_PASSWORD=votre_mot_de_passe
 
 Optionnellement, vous pouvez définir les variables d'environnement suivantes dans le fichier `.env` :
 ```bash
-OUTPUT_DIR=./telechargements
+OUTPUT_DIR=./downloads
 API_KEY=votre_cle_api_ici
 API_URL=https://example.com/get-cached-keys
 ```
@@ -87,7 +87,7 @@ options:
   --password PASSWORD   Mot de passe Oqee pour l'authentification
   --key KEY             Clé DRM pour le déchiffrement (peut être spécifiée plusieurs fois)
   --output-dir OUTPUT_DIR
-                        Répertoire de sortie pour les fichiers téléchargés (par défaut: ./download)
+                        Répertoire de sortie pour les fichiers téléchargés (par défaut: ./downloads)
   --widevine-device WIDEVINE_DEVICE
                         Chemin vers le CDM Widevine (par défaut: ./widevine/device.wvd)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}

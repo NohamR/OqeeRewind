@@ -11,7 +11,6 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 .eggs/
 lib/
@@ -222,4 +221,4 @@ video/
 dev_test/
 widevine/
 info.md
-/download
+# /downloads

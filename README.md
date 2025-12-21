@@ -87,7 +87,7 @@ options:
   --password PASSWORD   Oqee password for authentication
   --key KEY             DRM key for decryption (can be specified multiple times)
   --output-dir OUTPUT_DIR
-                        Output directory for downloaded files (default: ./download)
+                        Output directory for downloaded files (default: ./downloads)
   --widevine-device WIDEVINE_DEVICE
                         Path to Widevine device file (default: ./widevine/device.wvd)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}

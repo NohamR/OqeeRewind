@@ -76,8 +76,8 @@ def parse_arguments():
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="./download",
-        help="Output directory for downloaded files (default: ./download)",
+        default="./downloads",
+        help="Output directory for downloaded files (default: ./downloads)",
     )
     parser.add_argument(
         "--widevine-device",
@@ -207,7 +207,7 @@ if __name__ == "__main__":
             keys = []
 
         output_dir = os.getenv("OUTPUT_DIR") or (
-            args.output_dir if cli_mode else "./download"
+            args.output_dir if cli_mode else "./downloads"
         )
 
         start_tick_user = int(
