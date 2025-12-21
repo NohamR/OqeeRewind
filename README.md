@@ -11,6 +11,8 @@
     <a href="https://github.com/astral-sh/uv">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Onyx-Nostalgia/uv/refs/heads/fix/logo-badge/assets/badge/v0.json" alt="Manager: uv">
     </a>
+    <br>
+    <a href="README.fr.md">Français</a> | English
 </p>
 
 ## Legal Warning
