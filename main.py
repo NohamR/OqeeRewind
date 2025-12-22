@@ -253,6 +253,9 @@ if __name__ == "__main__":
                 )
 
                 valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user, batch_size))
+                if len(valid_ticks) == 0:
+                    logger.error("No valid ticks found in bruteforce range.")
+                    sys.exit(1)
                 valid_tick = valid_ticks[0]
 
                 start_tick, start_rep = find_nearest_tick_by_hour(
