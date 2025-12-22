@@ -11,9 +11,9 @@
     <a href="https://github.com/astral-sh/uv">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Onyx-Nostalgia/uv/refs/heads/fix/logo-badge/assets/badge/v0.json" alt="Gestionnaire: uv">
     </a>
+    <a href="https://deepwiki.com/NohamR/OqeeRewind"><img src="https://deepwiki.com/badge.svg" alt="Demandez à DeepWiki"></a>
     <br>
     Français | <a href="README.md">English</a>
-    <a href="https://deepwiki.com/NohamR/OqeeRewind"><img src="https://deepwiki.com/badge.svg" alt="Demandez à DeepWiki"></a>
 </p>
 
 ## Avertissement Légal
