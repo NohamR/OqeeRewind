@@ -13,6 +13,7 @@
     </a>
     <br>
     <a href="README.fr.md">Français</a> | English
+    <a href="https://deepwiki.com/NohamR/OqeeRewind"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 ## Legal Warning
