@@ -86,10 +86,16 @@ def parse_arguments():
         help="Path to Widevine device file (default: ./widevine/device.wvd)",
     )
     parser.add_argument(
-        "--batch-size",
+        "--bruteforce-batch-size",
         type=int,
         default=20000,
         help="Batch size for bruteforce (default: 20000)",
+    )
+    parser.add_argument(
+        "--segment-batch-size",
+        type=int,
+        default=64,
+        help="Batch size for segment downloads (default: 64)",
     )
     parser.add_argument(
         "--log-level",
@@ -188,7 +194,7 @@ if __name__ == "__main__":
             logger.debug("DRM keys: %s", keys)
             logger.debug("Output dir: %s", args.output_dir)
             logger.debug("Widevine device: %s", args.widevine_device)
-            logger.debug("Batch size: %d", args.batch_size)
+            logger.debug("Batch size: %d", args.bruteforce_batch_size)
 
         else:
             # Interactive mode
@@ -213,7 +219,8 @@ if __name__ == "__main__":
             title = title or f"{freebox_id}_{start_date.strftime('%Y%m%d_%H%M%S')}"
             keys = []
 
-        batch_size = args.batch_size if cli_mode else 20000
+        batch_size = args.bruteforce_batch_size if cli_mode else 20000
+        segment_batch_size = args.segment_batch_size if cli_mode else 64
         output_dir = os.getenv("OUTPUT_DIR") or (
             args.output_dir if cli_mode else "./downloads"
         )
@@ -249,7 +256,7 @@ if __name__ == "__main__":
                 )
             else:
                 logger.info(
-                    "Date mismatch between requested start date and manifest data, bruteforce method is needed."
+                    "Date mismatch between requested start date and manifest data for %s, bruteforce method is needed.", content_type
                 )
 
                 valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user, batch_size))
@@ -285,7 +292,7 @@ if __name__ == "__main__":
             start_tick = data["start_tick"]
             rep_nb = data["rep_nb"]
             asyncio.run(
-                save_segments(output_dir, track_id, start_tick, rep_nb, DURATION)
+                save_segments(output_dir, track_id, start_tick, rep_nb, DURATION, batch_size=segment_batch_size)
             )
 
             # Merge video and audio

@@ -69,8 +69,12 @@ https://github.com/user-attachments/assets/54a50828-c0e9-4a29-81c7-e188c238a998
 Vous pouvez automatiser le téléchargement en fournissant des arguments.
 
 ```bash
-usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE] [--duration DURATION] [--channel-id CHANNEL_ID] [--video VIDEO] [--audio AUDIO] [--title TITLE]
-               [--username USERNAME] [--password PASSWORD] [--key KEY] [--output-dir OUTPUT_DIR] [--widevine-device WIDEVINE_DEVICE]
+usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE] [--duration DURATION]
+               [--channel-id CHANNEL_ID] [--video VIDEO] [--audio AUDIO] [--title TITLE]
+               [--username USERNAME] [--password PASSWORD] [--key KEY]
+               [--output-dir OUTPUT_DIR] [--widevine-device WIDEVINE_DEVICE]
+               [--bruteforce-batch-size BRUTEFORCE_BATCH_SIZE]
+               [--segment-batch-size SEGMENT_BATCH_SIZE]
                [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 options:
@@ -91,8 +95,10 @@ options:
                         Répertoire de sortie pour les fichiers téléchargés (par défaut: ./downloads)
   --widevine-device WIDEVINE_DEVICE
                         Chemin vers le CDM Widevine (par défaut: ./widevine/device.wvd)
-  --batch-size BATCH_SIZE
-                         Nombre de requêtes pour le bruteforce (par défaut: 20000)
+  --bruteforce-batch-size BRUTEFORCE_BATCH_SIZE
+                        Taille de lot pour le bruteforce (par défaut: 20000)
+  --segment-batch-size SEGMENT_BATCH_SIZE
+                        Taille de lot pour les téléchargements de segments (par défaut: 64)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Définir le niveau de logging (par défaut: INFO)
 ```
