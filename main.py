@@ -27,7 +27,14 @@ from utils.times import (
     find_nearest_tick_by_hour,
     bruteforce,
 )
-from utils.stream import save_segments, get_kid, get_init
+from utils.stream import (
+    save_segments,
+    get_kid,
+    get_init,
+    get_manifest,
+    parse_mpd_manifest,
+    generate_mpd_manifest,
+)
 from utils.logging_config import setup_logging, logger
 
 load_dotenv()
@@ -64,6 +71,7 @@ def parse_arguments():
     parser.add_argument(
         "--title",
         type=str,
+        default="title",
         help="Title for the download (default: channel_id_start_date)",
     )
     parser.add_argument("--username", type=str, help="Oqee username for authentication")
@@ -98,6 +106,17 @@ def parse_arguments():
         help="Batch size for segment downloads (default: 64)",
     )
     parser.add_argument(
+        "--manifest",
+        action="store_true",
+        help="Generate an MPD manifest file instead of downloading",
+    )
+    parser.add_argument(
+        "--manifest-output",
+        type=str,
+        default="./downloads/manifest.mpd",
+        help="Output path for the generated manifest file (default: ./downloads/manifest.mpd)",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
@@ -126,10 +145,167 @@ if __name__ == "__main__":
             args.username,
             args.password,
             args.key,
+            args.manifest,
         ]
     )
 
     try:
+        if args.manifest:
+            if not args.channel_id:
+                logger.error("--channel-id is required for manifest mode")
+                sys.exit(1)
+            if not args.start_date:
+                logger.error("--start-date is required for manifest mode")
+                sys.exit(1)
+
+            try:
+                start_date = datetime.strptime(args.start_date, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                logger.error("Invalid start-date format. Use YYYY-MM-DD HH:MM:SS")
+                sys.exit(1)
+
+            logger.info("Manifest generation mode enabled.")
+            batch_size = args.bruteforce_batch_size
+
+            start_tick_user = int(
+                convert_sec_to_ticks(convert_date_to_sec(start_date), TIMESCALE)
+            )
+            logger.debug("Start date: %s", start_date)
+            logger.debug("Start tick (from date): %s", start_tick_user)
+
+            selections_avc = get_selection(args.channel_id, "720p+best", "best")
+            selections_hevc = get_selection(args.channel_id, "1080p+worst", "worst")
+
+            if not selections_avc or not selections_hevc:
+                logger.error("Error during stream selection.")
+                sys.exit(1)
+
+            dash_id = selections_avc.get("channel", {}).get("streams", {}).get("dash")
+            if not dash_id:
+                logger.error("No DASH stream found for this channel.")
+                sys.exit(1)
+
+            logger.debug("Channel ID: %s", args.channel_id)
+            logger.debug("DASH ID: %s", dash_id)
+
+            mpd_content = get_manifest(dash_id)
+            manifest_info = parse_mpd_manifest(mpd_content)
+
+            avc_sel = selections_avc["video"]
+            avc_init_segment = avc_sel["segments"]["initialization"]
+            avc_track_id = avc_init_segment.split("/")[-1].split("_init")[0]
+
+            logger.info("Bruteforcing AVC video track %s...", avc_track_id)
+            avc_valid_ticks = asyncio.run(
+                bruteforce(avc_track_id, start_tick_user, batch_size)
+            )
+            if len(avc_valid_ticks) == 0:
+                logger.error("No valid ticks found for AVC video.")
+                sys.exit(1)
+            avc_tick = avc_valid_ticks[0]
+            logger.info("AVC video tick found: %s", avc_tick)
+
+            hevc_sel = selections_hevc["video"]
+            hevc_init_segment = hevc_sel["segments"]["initialization"]
+            hevc_track_id = hevc_init_segment.split("/")[-1].split("_init")[0]
+
+            logger.info("Bruteforcing HEVC video track %s...", hevc_track_id)
+            hevc_valid_ticks = asyncio.run(
+                bruteforce(hevc_track_id, start_tick_user, batch_size)
+            )
+            if len(hevc_valid_ticks) == 0:
+                logger.warning(
+                    "No valid ticks found for HEVC video. HEVC tracks will be removed from manifest."
+                )
+                hevc_tick = None
+            else:
+                hevc_tick = hevc_valid_ticks[0]
+                logger.info("HEVC video tick found: %s", hevc_tick)
+
+            # Bruteforce for audio (same for all audio tracks)
+            audio_sel = selections_avc["audio"]
+            audio_init_segment = audio_sel["segments"]["initialization"]
+            audio_track_id = audio_init_segment.split("/")[-1].split("_init")[0]
+
+            logger.info("Bruteforcing audio track %s...", audio_track_id)
+            audio_valid_ticks = asyncio.run(
+                bruteforce(audio_track_id, start_tick_user, batch_size)
+            )
+            if len(audio_valid_ticks) == 0:
+                logger.error("No valid ticks found for audio.")
+                sys.exit(1)
+            audio_tick = audio_valid_ticks[0]
+            logger.info("Audio tick found: %s", audio_tick)
+
+            # Update the manifest with new start ticks and remove HEVC if not found
+            for period_info in manifest_info.get("periods", []):
+                adaptation_sets_to_remove = []
+
+                for adaptation_info in period_info.get("adaptation_sets", []):
+                    content_type_manifest = adaptation_info.get("contentType")
+                    if content_type_manifest == "video":
+                        reps_to_remove = []
+                        for rep in adaptation_info.get("representations", []):
+                            rep_codec = rep.get("codecs", "") or rep.get("codec", "")
+                            if rep.get("segments") and rep["segments"].get("timeline"):
+                                if rep_codec.startswith("avc"):
+                                    for seg in rep["segments"]["timeline"]:
+                                        seg["t"] = avc_tick
+                                    logger.debug(
+                                        "Updated AVC tick for video rep %s (codec: %s)",
+                                        rep.get("id"),
+                                        rep_codec,
+                                    )
+                                elif rep_codec.startswith(
+                                    "hvc"
+                                ) or rep_codec.startswith("hev"):
+                                    if hevc_tick is not None:
+                                        for seg in rep["segments"]["timeline"]:
+                                            seg["t"] = hevc_tick
+                                        logger.debug(
+                                            "Updated HEVC tick for video rep %s (codec: %s)",
+                                            rep.get("id"),
+                                            rep_codec,
+                                        )
+                                    else:
+                                        reps_to_remove.append(rep)
+                                        logger.debug(
+                                            "Marking HEVC rep %s for removal (no valid tick)",
+                                            rep.get("id"),
+                                        )
+
+                        # Remove HEVC representations
+                        for rep in reps_to_remove:
+                            adaptation_info["representations"].remove(rep)
+
+                        if len(adaptation_info.get("representations", [])) == 0:
+                            adaptation_sets_to_remove.append(adaptation_info)
+
+                    elif content_type_manifest == "audio":
+                        for rep in adaptation_info.get("representations", []):
+                            if rep.get("segments") and rep["segments"].get("timeline"):
+                                for seg in rep["segments"]["timeline"]:
+                                    seg["t"] = audio_tick
+                                logger.debug(
+                                    "Updated audio tick for rep %s", rep.get("id")
+                                )
+
+                # Remove empty adaptation sets
+                for adaptation_info in adaptation_sets_to_remove:
+                    period_info["adaptation_sets"].remove(adaptation_info)
+                    logger.debug(
+                        "Removed empty adaptation set %s", adaptation_info.get("id")
+                    )
+
+            # Generate and save the manifest
+            new_mpd_content = generate_mpd_manifest(manifest_info)
+            manifest_output_path = args.manifest_output
+            os.makedirs(os.path.dirname(manifest_output_path), exist_ok=True)
+            with open(manifest_output_path, "w") as f:
+                f.write(new_mpd_content)
+            logger.info("Manifest saved to %s", manifest_output_path)
+            sys.exit(0)
+
         if cli_mode:
             # CLI mode
             logger.info("Running in CLI mode...")
@@ -185,9 +361,15 @@ if __name__ == "__main__":
                 logger.error("Error during stream selection.")
                 sys.exit(1)
 
+            dash_id = selections.get("channel", {}).get("streams", {}).get("dash")
+            if not dash_id:
+                logger.error("No DASH stream found for this channel.")
+                sys.exit(1)
+
             logger.debug("Start date: %s", start_date)
             logger.debug("End date: %s", end_date)
             logger.debug("Channel ID: %s", args.channel_id)
+            logger.debug("DASH ID: %s", dash_id)
             logger.debug("Video quality: %s", args.video)
             logger.debug("Audio track: %s", args.audio)
             logger.debug("Title: %s", title)
@@ -256,10 +438,13 @@ if __name__ == "__main__":
                 )
             else:
                 logger.info(
-                    "Date mismatch between requested start date and manifest data for %s, bruteforce method is needed.", content_type
+                    "Date mismatch between requested start date and manifest data for %s, bruteforce method is needed.",
+                    content_type,
                 )
 
-                valid_ticks = asyncio.run(bruteforce(track_id, start_tick_user, batch_size))
+                valid_ticks = asyncio.run(
+                    bruteforce(track_id, start_tick_user, batch_size)
+                )
                 if len(valid_ticks) == 0:
                     logger.error("No valid ticks found in bruteforce range.")
                     sys.exit(1)
@@ -274,10 +459,12 @@ if __name__ == "__main__":
 
             rep_nb = (end_tick - start_tick) // DURATION + 1
             logger.info("Total segments to fetch for %s: %d", content_type, rep_nb)
+            codec = sel.get("codec", "")
             data = {
                 "start_tick": start_tick,
                 "rep_nb": rep_nb,
                 "track_id": track_id,
+                "codec": codec,
                 "selection": sel,
             }
             if content_type == "video":
@@ -292,7 +479,14 @@ if __name__ == "__main__":
             start_tick = data["start_tick"]
             rep_nb = data["rep_nb"]
             asyncio.run(
-                save_segments(output_dir, track_id, start_tick, rep_nb, DURATION, batch_size=segment_batch_size)
+                save_segments(
+                    output_dir,
+                    track_id,
+                    start_tick,
+                    rep_nb,
+                    DURATION,
+                    batch_size=segment_batch_size,
+                )
             )
 
             # Merge video and audio
@@ -415,13 +609,3 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         logger.info("\n\nProgram interrupted by user. Goodbye!")
-
-
-# uv run python main.py --start-date "2025-01-01 12:00:00" --duration "01:00:00" \
-# --channel-id 536 --video "720+best" --audio best --title "Test" \
-# --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 \
-# --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb
-# uv run python main.py --start-date "2025-12-19 12:00:00" --duration "00:01:00" \
-# --channel-id 536 --video "720+best" --audio best --title "Test" \
-# --key 5b1288b31b6a3f789a205614bbd7fac7:14980f2578eca20d78bd70601af21458 \
-# --key acacd48e12efbdbaa479b6d6dbf110b4:500af89b21d64c4833e107f26c424afb

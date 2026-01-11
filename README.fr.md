@@ -69,38 +69,42 @@ https://github.com/user-attachments/assets/54a50828-c0e9-4a29-81c7-e188c238a998
 Vous pouvez automatiser le téléchargement en fournissant des arguments.
 
 ```bash
-usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE] [--duration DURATION]
-               [--channel-id CHANNEL_ID] [--video VIDEO] [--audio AUDIO] [--title TITLE]
-               [--username USERNAME] [--password PASSWORD] [--key KEY]
-               [--output-dir OUTPUT_DIR] [--widevine-device WIDEVINE_DEVICE]
+usage: main.py [-h] [--start-date START_DATE] [--end-date END_DATE]
+               [--duration DURATION] [--channel-id CHANNEL_ID] [--video VIDEO]
+               [--audio AUDIO] [--title TITLE] [--username USERNAME]
+               [--password PASSWORD] [--key KEY] [--output-dir OUTPUT_DIR]
+               [--widevine-device WIDEVINE_DEVICE]
                [--bruteforce-batch-size BRUTEFORCE_BATCH_SIZE]
-               [--segment-batch-size SEGMENT_BATCH_SIZE]
+               [--segment-batch-size SEGMENT_BATCH_SIZE] [--manifest]
+               [--manifest-output MANIFEST_OUTPUT]
                [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
-
 options:
-  -h, --help            afficher ce message d'aide et quitter
+  -h, --help            show this help message and exit
   --start-date START_DATE
-                        Date et heure de début au format AAAA-MM-JJ HH:MM:SS
-  --end-date END_DATE   Date et heure de fin au format AAAA-MM-JJ HH:MM:SS
-  --duration DURATION   Durée au format HH:MM:SS (alternative à --end-date)
+                        Start date and time in YYYY-MM-DD HH:MM:SS format
+  --end-date END_DATE   End date and time in YYYY-MM-DD HH:MM:SS format
+  --duration DURATION   Duration in HH:MM:SS format (alternative to --end-date)
   --channel-id CHANNEL_ID
-                        ID de la chaîne à télécharger
-  --video VIDEO         Sélection de la qualité vidéo (ex: 'best', '1080p', '720p', '1080p+best', '720p+worst')
-  --audio AUDIO         Sélection de la piste audio (ex: 'best', 'fra_main')
-  --title TITLE         Titre du téléchargement (par défaut: channel_id_start_date)
-  --username USERNAME   Nom d'utilisateur Oqee pour l'authentification
-  --password PASSWORD   Mot de passe Oqee pour l'authentification
-  --key KEY             Clé DRM pour le déchiffrement (peut être spécifiée plusieurs fois)
+                        Channel ID to download from
+  --video VIDEO         Video quality selection (e.g., 'best', '1080p', '720p', '1080p+best', '720p+worst')
+  --audio AUDIO         Audio track selection (e.g., 'best', 'fra_main')
+  --title TITLE         Title for the download (default: channel_id_start_date)
+  --username USERNAME   Oqee username for authentication
+  --password PASSWORD   Oqee password for authentication
+  --key KEY             DRM key for decryption (can be specified multiple times)
   --output-dir OUTPUT_DIR
-                        Répertoire de sortie pour les fichiers téléchargés (par défaut: ./downloads)
+                        Output directory for downloaded files (default: ./downloads)
   --widevine-device WIDEVINE_DEVICE
-                        Chemin vers le CDM Widevine (par défaut: ./widevine/device.wvd)
+                        Path to Widevine device file (default: ./widevine/device.wvd)
   --bruteforce-batch-size BRUTEFORCE_BATCH_SIZE
-                        Taille de lot pour le bruteforce (par défaut: 20000)
+                        Batch size for bruteforce (default: 20000)
   --segment-batch-size SEGMENT_BATCH_SIZE
-                        Taille de lot pour les téléchargements de segments (par défaut: 64)
+                        Batch size for segment downloads (default: 64)
+  --manifest            Generate an MPD manifest file instead of downloading
+  --manifest-output MANIFEST_OUTPUT
+                        Output path for the generated manifest file (default: ./downloads/manifest.mpd)
   --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Définir le niveau de logging (par défaut: INFO)
+                        Set the logging level (default: INFO)
 ```
 https://github.com/user-attachments/assets/cc76990a-3d13-4be1-bb3c-ba8d87e6eaba
 
@@ -115,6 +119,11 @@ uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "0
 **Télécharger avec des clés DRM manuelles :**
 ```bash
 uv run main.py --channel-id 536 --start-date "2025-12-19 12:00:00" --duration "00:05:00" --key "KID:KEY" --key "KID2:KEY2"
+```
+
+**Générer uniquement le manifeste MPD (sans téléchargement) :**
+```bash
+uv run main.py --channel-id 536 --start-date "2025-01-01 12:00:00" --manifest --manifest-output "./downloads/my_manifest.mpd"
 ```
 
 ## Déchiffrement DRM
