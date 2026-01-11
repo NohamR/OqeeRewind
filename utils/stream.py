@@ -308,6 +308,7 @@ def get_manifest(manifest_id):
     Returns:
         The manifest content as text.
     """
+    logger.debug("Fetching manifest for ID: %s", manifest_id)
     headers = {
         "accept": "*/*",
         "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
