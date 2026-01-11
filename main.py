@@ -298,11 +298,11 @@ if __name__ == "__main__":
                     )
 
             # Generate and save the manifest
-            new_mpd_content = generate_mpd_manifest(manifest_info)
+            generated_mpd_content = generate_mpd_manifest(manifest_info)
             manifest_output_path = args.manifest_output
             os.makedirs(os.path.dirname(manifest_output_path), exist_ok=True)
-            with open(manifest_output_path, "w") as f:
-                f.write(new_mpd_content)
+            with open(manifest_output_path, "w", encoding="utf-8") as f:
+                f.write(generated_mpd_content)
             logger.info("Manifest saved to %s", manifest_output_path)
             sys.exit(0)
 
