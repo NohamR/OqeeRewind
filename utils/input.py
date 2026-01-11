@@ -404,6 +404,13 @@ def select_track(content_dict, quality_spec, content_type):
     Returns:
         dict: Selected track or None.
     """
+    if quality_spec is None:
+        logger.error(
+            f"No {content_type} quality specified. Use --{content_type} option "
+            f"(e.g., --{content_type} best)"
+        )
+        return None
+
     if "+" in quality_spec:
         filter_part, pref = quality_spec.split("+", 1)
         pref = pref.lower()
