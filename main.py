@@ -141,7 +141,6 @@ if __name__ == "__main__":
             args.channel_id,
             args.video,
             args.audio,
-            args.title,
             args.username,
             args.password,
             args.key,
