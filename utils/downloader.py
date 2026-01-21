@@ -18,7 +18,9 @@ def fetch_drm_keys(kid: str, api_url: str, api_key: str) -> str:
         "Api-Key": api_key,
     }
     data = {"service": "oqee", "kid": kid}
+    logger.debug("Fetching DRM key for KID: %s", kid)
     response = requests.post(api_url, headers=headers, json=data, timeout=10)
+    logger.debug("DRM key fetch response: %s", response.text)
     response.raise_for_status()
     return response.json()["key"]
 
