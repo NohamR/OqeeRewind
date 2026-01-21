@@ -28,6 +28,7 @@ Cette application n'est pas affiliée à Oqee. Cette application vous permet de 
 - Go ([Guide d'installation](https://go.dev/doc/install))
 - ffmpeg
 - [mp4ff-decrypt](https://github.com/Eyevinn/mp4ff)
+- **Connectivité IPv6** (le CDN est exclusivement IPv6)
 ```bash
 go install github.com/Eyevinn/mp4ff/cmd/mp4ff-decrypt@latest
 ```
