@@ -350,7 +350,7 @@ async def fetch_segment(session, ticks, track_id):
     Returns:
         The tick value if successful, None otherwise.
     """
-    url = f"https://media.stream.proxad.net/media/{track_id}_{ticks}"
+    url = f"https://media4.stream.proxad.net/media/{track_id}_{ticks}"
     headers = {
         "Accept": "*/*",
         "Referer": "https://tv.free.fr/",
@@ -376,7 +376,7 @@ def get_init(output_folder, track_id):
         output_folder: The output folder path.
         track_id: The track identifier.
     """
-    url = f"https://media.stream.proxad.net/media/{track_id}_init"
+    url = f"https://media4.stream.proxad.net/media/{track_id}_init"
     headers = {
         "Accept": "*/*",
         "Referer": "https://tv.free.fr/",
@@ -417,7 +417,7 @@ async def save_segments(
         Returns:
             Tuple of (success: bool, tick: int, rep: int)
         """
-        url = f"https://media.stream.proxad.net/media/{track_id}_{tick}"
+        url = f"https://media4.stream.proxad.net/media/{track_id}_{tick}"
         headers = {
             "Accept": "*/*",
             "Referer": "https://tv.free.fr/",
