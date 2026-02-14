@@ -65,7 +65,7 @@ def get_date_input():
             "type": "input",
             "message": "Enter a start date/time (YYYY-MM-DD HH:MM:SS):",
             "name": "datetime",
-            "default": "2025-01-01 12:00:00",
+            "default": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validate": DatetimeValidator(),
             "invalid_message": "Invalid date/time format. Use YYYY-MM-DD HH:MM:SS",
         }
@@ -100,7 +100,7 @@ def get_date_input():
             "default": (
                 start_date_result["datetime"]
                 if start_date_result
-                else "2025-01-01 12:00:00"
+                else datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             ),
             "validate": DatetimeValidator(),
             "when": lambda answers: answers["input_type"] == "End date/time",

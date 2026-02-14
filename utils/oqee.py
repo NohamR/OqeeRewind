@@ -59,6 +59,10 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         self.right_token = None
         self.profil_id = None
         self.lic_url = "https://license.oqee.net/api/v1/live/license/widevine"
+        if "fbx" in username.lower():
+            self.abo = True
+        else:
+            self.abo = False
 
         self.configure(username, password)
 
@@ -124,10 +128,10 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         data = self.session.get(
             "https://api.oqee.net/api/v2/user/profiles", headers=headers
         ).json()
-        logger.info("Selecting first profile by default.")
+        # logger.info("Selecting first profile by default.")
         return data["result"][0]["id"]
 
-    def login_cred(self, username, password):
+    def login_cred_abo(self, username, password):
         """Authenticate with OQEE service using Free account credentials."""
         headers = self._build_headers(
             overrides={
@@ -209,6 +213,57 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             json={"type": "freeoa", "token": token},
         ).json()
         return data["result"]["token"]
+    
+
+    def login_cred_free(self, username, password):
+        """Authenticate with OQEE service using Free account credentials."""
+        headers = {
+            'accept': '*/*',
+            'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+            'cache-control': 'no-cache',
+            'content-type': 'application/json',
+            'origin': 'https://tv.free.fr',
+            'pragma': 'no-cache',
+            'priority': 'u=1, i',
+            'referer': 'https://tv.free.fr/',
+            'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'cross-site',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+            'x-oqee-customization': '0',
+            'x-oqee-platform': 'web',
+        }
+
+        data = {"provider":"oqee","platform":"web"}
+
+        response = self.session.post('https://api.oqee.net/api/v2/user/oauth/init', headers=headers, json=data).json()
+        redirect_url = response['result']['redirect_url']
+        token = parse_qs(urlparse(redirect_url).query)['token'][0]
+
+        data = {"email":username,"password":password,"token":token}
+        response = self.session.post('https://api.oqee.net/api/v1/user/oauthorize', headers=headers, json=data).json()
+
+        if not response["success"]:
+            raise ValueError(
+                f"Login failed: invalid credentials or error in authentication - {response.get('error', {}).get('msg', 'No error message')}"
+            )
+        parsed_url = parse_qs(urlparse(response["result"]["redirect_url"]).query)
+        if "code" not in parsed_url:
+            raise ValueError(
+                "Login failed: invalid credentials or error in authentication - no code in redirect URL"
+            )
+        code = parsed_url["code"][0]
+
+        data = self.session.post(
+            "https://api.oqee.net/api/v5/user/login",
+            headers=headers,
+            json={"type": "oqeeoa", "token": code},
+        ).json()
+        return data["result"]["token"]
+
 
     def login_ip(self):
         """
@@ -231,9 +286,13 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             logger.info("No credentials provided, using IP login.")
             self.access_token = self.login_ip()
         else:
-            logger.info("Logging in with provided credentials")
             try:
-                self.access_token = self.login_cred(username, password)
+                if self.abo:
+                    logger.info("Logging in with provided credentials (abo account detected).")
+                    self.access_token = self.login_cred_abo(username, password)
+                else:
+                    logger.info("Logging in with provided credentials (free account detected).")
+                    self.access_token = self.login_cred_free(username, password)
             except ValueError as e:
                 logger.warning(
                     "Credential login failed: %s. Falling back to IP login.", e
@@ -242,8 +301,10 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
 
         logger.info("Fetching rights token")
         self.right_token = self.right()
+        logger.debug("Rights token obtained: %s", self.right_token[:10] + "..." if self.right_token else "None")
         logger.info("Fetching profile ID")
         self.profil_id = self.profil()
+        logger.debug("Profile ID obtained: %s", self.profil_id)
 
         self.headers = self._build_headers(
             overrides={
