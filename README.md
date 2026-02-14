@@ -41,7 +41,12 @@ uv sync
 ```
 
 ### Configuration
-Create a `.env` file in the root directory and add your Oqee credentials (otherwise the script will try to use IP login first):
+The script supports three authentication methods, all automatically detected:
+1. IP Login: If you're on a Free network, authentication happens automatically via your IP address (no credentials required)
+2. Freebox Account: Use your Free account credentials (username containing "fbx")
+3. OQEE Account: Use your standard OQEE account credentials
+
+Create a `.env` file in the root directory and add your Oqee credentials (IP login is used as fallback if credentials fail):
 ```bash
 OQEE_USERNAME=your_username
 OQEE_PASSWORD=your_password

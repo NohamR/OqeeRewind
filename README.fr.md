@@ -41,7 +41,12 @@ uv sync
 ```
 
 ### Configuration
-Créez un fichier `.env` dans le répertoire racine et ajoutez vos identifiants Oqee (sinon le script essaiera d'abord d'utiliser la connexion par IP) :
+Le script supporte trois méthodes d'authentification, toutes détectées automatiquement :
+1. Connexion par IP : Si vous êtes sur un réseau Free, l'authentification se fait automatiquement via votre adresse IP (aucun identifiant requis)
+2. Compte Freebox : Utilisez vos identifiants de compte Free (nom d'utilisateur contenant "fbx")
+3. Compte OQEE : Utilisez vos identifiants de compte OQEE standard
+
+Créez un fichier `.env` dans le répertoire racine et ajoutez vos identifiants Oqee (la connexion par IP est utilisée en dernier recours si les identifiants échouent) :
 ```bash
 OQEE_USERNAME=votre_nom_utilisateur
 OQEE_PASSWORD=votre_mot_de_passe
