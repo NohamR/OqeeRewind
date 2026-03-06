@@ -344,6 +344,9 @@ if __name__ == "__main__":
             if not end_date:
                 logger.error("Either end-date or duration is required in CLI mode")
                 sys.exit(1)
+            if end_date > datetime.now():
+                logger.error("End date cannot be in the future :p")
+                sys.exit(1)
 
             keys = args.key or []
             # END_SUFFIX = ".".join([args.video, args.audio]) if args.video and args.audio else ""
@@ -395,6 +398,10 @@ if __name__ == "__main__":
                     start_date = program_selection["start_date"]
                     end_date = program_selection["end_date"]
                     title = program_selection["title"]
+
+            if end_date > datetime.now():
+                logger.error("End date cannot be in the future :p")
+                sys.exit(1)
 
             title = title or f"{freebox_id}_{start_date.strftime('%Y%m%d_%H%M%S')}"
             keys = []
