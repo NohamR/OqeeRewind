@@ -41,10 +41,11 @@ uv sync
 ```
 
 ### Configuration
-The script supports three authentication methods, all automatically detected:
+The script supports four authentication methods, all automatically detected:
 1. IP Login: If you're on a Free network, authentication happens automatically via your IP address (no credentials required)
 2. Freebox Account: Use your Free account credentials (username containing "fbx")
-3. OQEE Account: Use your standard OQEE account credentials
+3. Free Mobile Account: Use your Free Mobile credentials (8-digit username)
+4. OQEE Account: Use your standard OQEE account credentials
 
 Create a `.env` file in the root directory and add your Oqee credentials (IP login is used as fallback if credentials fail):
 ```bash

@@ -41,10 +41,11 @@ uv sync
 ```
 
 ### Configuration
-Le script supporte trois méthodes d'authentification, toutes détectées automatiquement :
+Le script supporte quatre méthodes d'authentification, toutes détectées automatiquement :
 1. Connexion par IP : Si vous êtes sur un réseau Free, l'authentification se fait automatiquement via votre adresse IP (aucun identifiant requis)
 2. Compte Freebox : Utilisez vos identifiants de compte Free (nom d'utilisateur contenant "fbx")
-3. Compte OQEE : Utilisez vos identifiants de compte OQEE standard
+3. Compte Free Mobile : Utilisez vos identifiants Free Mobile (nom d'utilisateur à 8 chiffres)
+4. Compte OQEE : Utilisez vos identifiants de compte OQEE standard
 
 Créez un fichier `.env` dans le répertoire racine et ajoutez vos identifiants Oqee (la connexion par IP est utilisée en dernier recours si les identifiants échouent) :
 ```bash
