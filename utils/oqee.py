@@ -1,6 +1,9 @@
 """OQEE streaming service client for authentication and content access."""
 
 import base64
+import json
+import os
+import time
 from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
 import requests
@@ -91,6 +94,50 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         """Configure the client by logging in and processing title information."""
         logger.info("Logging in")
         self.login(username, password)
+
+    def _is_token_valid(self, token):
+        """Check if JWT token is still valid (checking expiry)."""
+        if not token:
+            return False
+        try:
+            payload_b64 = token.split(".")[1]
+            payload_b64 += "=" * (-len(payload_b64) % 4)
+            payload = json.loads(base64.b64decode(payload_b64))
+            return payload.get("exp", 0) > time.time()
+        except Exception:
+            return False
+
+    def load_cache(self):
+        """Load tokens from cache file."""
+        if os.path.exists(".oqee_token.json"):
+            try:
+                with open(".oqee_token.json", "r", encoding="utf-8") as f:
+                    cache = json.load(f)
+                if self._is_token_valid(
+                    cache.get("access_token")
+                ) and self._is_token_valid(cache.get("right_token")):
+                    self.access_token = cache.get("access_token")
+                    self.right_token = cache.get("right_token")
+                    self.profil_id = cache.get("profil_id")
+                    return True
+            except Exception as e:
+                logger.debug("Failed to load token cache: %s", e)
+        return False
+
+    def save_cache(self):
+        """Save tokens to cache file."""
+        try:
+            with open(".oqee_token.json", "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "access_token": self.access_token,
+                        "right_token": self.right_token,
+                        "profil_id": self.profil_id,
+                    },
+                    f,
+                )
+        except Exception as e:
+            logger.debug("Failed to save token cache: %s", e)
 
     def _build_headers(self, overrides=None, remove=None):
         """Clone default headers and apply optional overrides/removals."""
@@ -338,42 +385,49 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         """
         Log in to the Oqee service and set up necessary tokens and headers.
         """
-        if not username or not password:
-            logger.info("No credentials provided, using IP login.")
-            self.access_token = self.login_ip()
+        if self.load_cache():
+            logger.info("Loaded valid tokens from cache.")
         else:
-            try:
-                if self.abo:
-                    if self.fbx:
-                        logger.info(
-                            "Logging in with provided credentials (abo account detected)."
-                        )
-                        self.access_token = self.login_cred_fbx(username, password)
+            if not username or not password:
+                logger.info("No credentials provided, using IP login.")
+                self.access_token = self.login_ip()
+            else:
+                try:
+                    if self.abo:
+                        if self.fbx:
+                            logger.info(
+                                "Logging in with provided credentials (abo account detected)."
+                            )
+                            self.access_token = self.login_cred_fbx(username, password)
+                        else:
+                            logger.info(
+                                "Logging in with provided credentials (abo account detected, non-FBX)."
+                            )
+                            self.access_token = self.login_cred_mobile(
+                                username, password
+                            )
                     else:
                         logger.info(
-                            "Logging in with provided credentials (abo account detected, non-FBX)."
+                            "Logging in with provided credentials (free account detected)."
                         )
-                        self.access_token = self.login_cred_mobile(username, password)
-                else:
-                    logger.info(
-                        "Logging in with provided credentials (free account detected)."
+                        self.access_token = self.login_cred_free(username, password)
+                except ValueError as e:
+                    logger.warning(
+                        "Credential login failed: %s. Falling back to IP login.", e
                     )
-                    self.access_token = self.login_cred_free(username, password)
-            except ValueError as e:
-                logger.warning(
-                    "Credential login failed: %s. Falling back to IP login.", e
-                )
-                self.access_token = self.login_ip()
+                    self.access_token = self.login_ip()
 
-        logger.info("Fetching rights token")
-        self.right_token = self.right()
-        logger.debug(
-            "Rights token obtained: %s",
-            self.right_token[:10] + "..." if self.right_token else "None",
-        )
-        logger.info("Fetching profile ID")
-        self.profil_id = self.profil()
-        logger.debug("Profile ID obtained: %s", self.profil_id)
+            logger.info("Fetching rights token")
+            self.right_token = self.right()
+            logger.debug(
+                "Rights token obtained: %s",
+                self.right_token[:10] + "..." if self.right_token else "None",
+            )
+            logger.info("Fetching profile ID")
+            self.profil_id = self.profil()
+            logger.debug("Profile ID obtained: %s", self.profil_id)
+
+            self.save_cache()
 
         self.headers = self._build_headers(
             overrides={

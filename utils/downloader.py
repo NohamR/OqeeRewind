@@ -51,7 +51,8 @@ def get_keys(kids: list[str], method: dict) -> list[str]:
             keys.append(f"{kid}:{key}")
         return keys
 
-    logger.info("Fetching DRM keys via Widevine CDM...")
+    cdm_name = (method["device_file"]).split("/")[-1]
+    logger.info(f"Fetching DRM keys via Widevine CDM {cdm_name}...")
     client = method["client_class"]
 
     device = Device.load(method["device_file"])
