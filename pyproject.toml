@@ -11,6 +11,7 @@ authors = [
 
 dependencies = [
     "aiohttp>=3.13.2",
+    "bs4>=0.0.2",
     "InquirerPy>=0.3.4",
     "python-dotenv>=1.2.1",
     "pywidevine>=1.9.0",

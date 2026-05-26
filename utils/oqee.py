@@ -2,6 +2,7 @@
 
 import base64
 from urllib.parse import urlparse, parse_qs
+from bs4 import BeautifulSoup
 import requests
 
 from dotenv import load_dotenv
@@ -31,15 +32,6 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             ),
             "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
             "cache-control": "no-cache",
-            "pragma": "no-cache",
-            "priority": "u=0, i",
-            "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"macOS"',
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "none",
-            "sec-fetch-user": "?1",
             "upgrade-insecure-requests": "1",
             "user-agent": (
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -61,6 +53,10 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         self.lic_url = "https://license.oqee.net/api/v1/live/license/widevine"
         if "fbx" in username.lower():
             self.abo = True
+            self.fbx = True
+        elif len(username) == 8 and username.isdigit():
+            self.abo = True
+            self.fbx = False
         else:
             self.abo = False
 
@@ -131,7 +127,7 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         # logger.info("Selecting first profile by default.")
         return data["result"][0]["id"]
 
-    def login_cred_abo(self, username, password):
+    def login_cred_fbx(self, username, password):
         """Authenticate with OQEE service using Free account credentials."""
         headers = self._build_headers(
             overrides={
@@ -169,20 +165,12 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             "Content-Type": "application/x-www-form-urlencoded",
             "Origin": "https://subscribe.free.fr",
             "Referer": "https://subscribe.free.fr/auth/auth.pl?",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-User": "?1",
-            "Sec-GPC": "1",
             "Upgrade-Insecure-Requests": "1",
             "user-agent": (
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/131.0.0.0 Safari/537.36"
             ),
-            "sec-ch-ua": '"Brave";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"macOS"',
         }
         data = {
             "login": username,
@@ -214,6 +202,75 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         ).json()
         return data["result"]["token"]
 
+    def login_cred_mobile(self, username, password):
+        """Authenticate with OQEE service using Free mobile account credentials."""
+        headers = {
+            "accept": "*/*",
+            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "origin": "https://tv.free.fr",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+            "x-oqee-customization": "0",
+            "x-oqee-platform": "web",
+        }
+
+        data = {"provider": "freemobile", "platform": "web"}
+        response = self.session.post(
+            "https://api.oqee.net/api/v2/user/oauth/init", headers=headers, json=data
+        ).json()
+        redirect_url = response["result"]["redirect_url"]
+        token = parse_qs(urlparse(redirect_url).query)["token"][0]
+
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://mobile.free.fr",
+            "Upgrade-Insecure-Requests": "1",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+        }
+
+        page = self.session.get(redirect_url, headers=headers)
+        soup = BeautifulSoup(page.text, "html.parser")
+
+        token_csrf = soup.find("input", {"name": "token-csrf"})
+        token_csrf_value = token_csrf["value"] if token_csrf else None
+        callback_url = soup.find("input", {"name": "callback_url"})
+        callback_url_value = callback_url["value"] if callback_url else None
+
+        params = (
+            ("service", "oqee"),
+            ("token", token),
+        )
+
+        data = {
+            "token-csrf": token_csrf_value,
+            "callback_url": callback_url_value,
+            "identifiant": username,
+            "password": password,
+            "action": "sso-submit",
+        }
+
+        response = self.session.post(
+            "https://mobile.free.fr/sso/", headers=headers, params=params, data=data
+        )
+
+        parsed_url = parse_qs(urlparse(response.url).query)
+        if "result" not in parsed_url:
+            raise ValueError(
+                "Login failed: invalid credentials or error in authentication"
+            )
+        freemobile_token = parsed_url["result"][0]
+
+        headers = self._build_headers(
+            overrides={"x-oqee-customization": "0"}, remove=("x-oqee-account-provider",)
+        )
+        data = self.session.post(
+            "https://api.oqee.net/api/v5/user/login",
+            headers=headers,
+            json={"type": "freemobileoa", "token": freemobile_token},
+        ).json()
+        return data["result"]["token"]
+
     def login_cred_free(self, username, password):
         """Authenticate with OQEE service using Free account credentials."""
         headers = {
@@ -222,15 +279,6 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
             "cache-control": "no-cache",
             "content-type": "application/json",
             "origin": "https://tv.free.fr",
-            "pragma": "no-cache",
-            "priority": "u=1, i",
-            "referer": "https://tv.free.fr/",
-            "sec-ch-ua": '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"macOS"',
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "cross-site",
             "user-agent": (
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
@@ -240,7 +288,6 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         }
 
         data = {"provider": "oqee", "platform": "web"}
-
         response = self.session.post(
             "https://api.oqee.net/api/v2/user/oauth/init", headers=headers, json=data
         ).json()
@@ -297,10 +344,16 @@ class OqeeClient:  # pylint: disable=too-many-instance-attributes
         else:
             try:
                 if self.abo:
-                    logger.info(
-                        "Logging in with provided credentials (abo account detected)."
-                    )
-                    self.access_token = self.login_cred_abo(username, password)
+                    if self.fbx:
+                        logger.info(
+                            "Logging in with provided credentials (abo account detected)."
+                        )
+                        self.access_token = self.login_cred_fbx(username, password)
+                    else:
+                        logger.info(
+                            "Logging in with provided credentials (abo account detected, non-FBX)."
+                        )
+                        self.access_token = self.login_cred_mobile(username, password)
                 else:
                     logger.info(
                         "Logging in with provided credentials (free account detected)."
