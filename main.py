@@ -18,7 +18,7 @@ from utils.input import (
 )
 from utils.oqee import OqeeClient
 from utils.downloader import get_keys
-from utils.utilities import verify_cmd, merge_segments, decrypt, verify_mp4ff
+from utils.utilities import verify_cmd, decrypt, verify_mp4ff
 from utils.times import (
     convert_date_to_sec,
     convert_sec_to_ticks,
@@ -190,36 +190,49 @@ if __name__ == "__main__":
             mpd_content = get_manifest(dash_id)
             manifest_info = parse_mpd_manifest(mpd_content)
 
-            avc_sel = selections_avc["video"]
-            avc_init_segment = avc_sel["segments"]["initialization"]
-            avc_track_id = avc_init_segment.split("/")[-1].split("_init")[0]
+            avc_tick = None
+            if "video" in selections_avc:
+                avc_sel = selections_avc["video"]
+                avc_init_segment = avc_sel["segments"]["initialization"]
+                avc_track_id = avc_init_segment.split("/")[-1].split("_init")[0]
 
-            logger.info("Bruteforcing AVC video track %s...", avc_track_id)
-            avc_valid_ticks = asyncio.run(
-                bruteforce(avc_track_id, start_tick_user, batch_size)
-            )
-            if len(avc_valid_ticks) == 0:
-                logger.error("No valid ticks found for AVC video.")
-                sys.exit(1)
-            avc_tick = avc_valid_ticks[0]
-            logger.info("AVC video tick found: %s", avc_tick)
-
-            hevc_sel = selections_hevc["video"]
-            hevc_init_segment = hevc_sel["segments"]["initialization"]
-            hevc_track_id = hevc_init_segment.split("/")[-1].split("_init")[0]
-
-            logger.info("Bruteforcing HEVC video track %s...", hevc_track_id)
-            hevc_valid_ticks = asyncio.run(
-                bruteforce(hevc_track_id, start_tick_user, batch_size)
-            )
-            if len(hevc_valid_ticks) == 0:
-                logger.warning(
-                    "No valid ticks found for HEVC video. HEVC tracks will be removed from manifest."
+                logger.info("Bruteforcing AVC video track %s...", avc_track_id)
+                avc_valid_ticks = asyncio.run(
+                    bruteforce(avc_track_id, start_tick_user, batch_size)
                 )
-                hevc_tick = None
+                if len(avc_valid_ticks) == 0:
+                    logger.warning(
+                        "No valid ticks found for AVC video. AVC tracks will be removed from manifest."
+                    )
+                else:
+                    avc_tick = avc_valid_ticks[0]
+                    logger.info("AVC video tick found: %s", avc_tick)
             else:
-                hevc_tick = hevc_valid_ticks[0]
-                logger.info("HEVC video tick found: %s", hevc_tick)
+                logger.warning(
+                    "No AVC video track available. AVC tracks will be removed from manifest."
+                )
+
+            hevc_tick = None
+            if "video" in selections_hevc:
+                hevc_sel = selections_hevc["video"]
+                hevc_init_segment = hevc_sel["segments"]["initialization"]
+                hevc_track_id = hevc_init_segment.split("/")[-1].split("_init")[0]
+
+                logger.info("Bruteforcing HEVC video track %s...", hevc_track_id)
+                hevc_valid_ticks = asyncio.run(
+                    bruteforce(hevc_track_id, start_tick_user, batch_size)
+                )
+                if len(hevc_valid_ticks) == 0:
+                    logger.warning(
+                        "No valid ticks found for HEVC video. HEVC tracks will be removed from manifest."
+                    )
+                else:
+                    hevc_tick = hevc_valid_ticks[0]
+                    logger.info("HEVC video tick found: %s", hevc_tick)
+            else:
+                logger.warning(
+                    "No HEVC video track available. HEVC tracks will be removed from manifest."
+                )
 
             # Bruteforce for audio (same for all audio tracks)
             audio_sel = selections_avc["audio"]
@@ -248,13 +261,20 @@ if __name__ == "__main__":
                             rep_codec = rep.get("codecs", "") or rep.get("codec", "")
                             if rep.get("segments") and rep["segments"].get("timeline"):
                                 if rep_codec.startswith("avc"):
-                                    for seg in rep["segments"]["timeline"]:
-                                        seg["t"] = avc_tick
-                                    logger.debug(
-                                        "Updated AVC tick for video rep %s (codec: %s)",
-                                        rep.get("id"),
-                                        rep_codec,
-                                    )
+                                    if avc_tick is not None:
+                                        for seg in rep["segments"]["timeline"]:
+                                            seg["t"] = avc_tick
+                                        logger.debug(
+                                            "Updated AVC tick for video rep %s (codec: %s)",
+                                            rep.get("id"),
+                                            rep_codec,
+                                        )
+                                    else:
+                                        reps_to_remove.append(rep)
+                                        logger.debug(
+                                            "Marking AVC rep %s for removal (no valid tick)",
+                                            rep.get("id"),
+                                        )
                                 elif rep_codec.startswith(
                                     "hvc"
                                 ) or rep_codec.startswith("hev"):
@@ -273,7 +293,7 @@ if __name__ == "__main__":
                                             rep.get("id"),
                                         )
 
-                        # Remove HEVC representations
+                        # Remove representations with no valid tick
                         for rep in reps_to_remove:
                             adaptation_info["representations"].remove(rep)
 
@@ -494,17 +514,6 @@ if __name__ == "__main__":
                 )
             )
 
-            # Merge video and audio
-            video_file = f"{output_dir}/temp_video.mp4"
-            audio_file = f"{output_dir}/temp_audio.mp4"
-
-            data["file"] = video_file if content_type == "video" else audio_file
-            merge_segments(
-                output_dir,
-                track_id,
-                video_file if content_type == "video" else audio_file,
-            )
-
             kid = get_kid(output_dir, track_id)
             data["kid"] = kid
             key = None
@@ -539,7 +548,6 @@ if __name__ == "__main__":
 
         for content_type, data in [("video", video_data), ("audio", audio_data)]:
             track_id = data["track_id"]
-            file = data["file"]
             kid = data["kid"]
 
             key = None
@@ -550,7 +558,7 @@ if __name__ == "__main__":
 
             init_path = get_init(output_dir, track_id)
             dec_file = f"{output_dir}/dec_{content_type}.mp4"
-            decrypt(file, init_path, dec_file, key)
+            decrypt(f"{output_dir}/segments_{track_id}", init_path, dec_file, key)
 
         track_id_video = video_data["track_id"]
         track_id_audio = audio_data["track_id"]
@@ -607,8 +615,7 @@ if __name__ == "__main__":
         os.remove(f"{output_dir}/dec_audio.mp4")
         os.remove(f"{output_dir}/video.mp4")
         os.remove(f"{output_dir}/audio.mp4")
-        os.remove(f"{output_dir}/temp_video.mp4")
-        os.remove(f"{output_dir}/temp_audio.mp4")
+
         shutil.rmtree(f"{output_dir}/segments_{video_data['track_id']}")
         shutil.rmtree(f"{output_dir}/segments_{audio_data['track_id']}")
 

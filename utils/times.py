@@ -3,12 +3,15 @@
 import asyncio
 import datetime
 import time
+from zoneinfo import ZoneInfo
 
 import aiohttp
 from tqdm import tqdm
 
 from utils.stream import fetch_segment
 from utils.logging_config import logger
+
+FRANCE_TZ = ZoneInfo("Europe/Paris")
 
 
 def convert_ticks_to_sec(ticks, timescale):
@@ -21,24 +24,24 @@ def convert_sec_to_ticks(seconds, timescale):
     return seconds * timescale
 
 
-def convert_sec_to_date(seconds, offset_hours=1):
-    """Convert seconds to datetime with offset."""
-    dt = datetime.datetime.utcfromtimestamp(seconds) + datetime.timedelta(
-        hours=offset_hours
+def convert_sec_to_date(seconds):
+    """Convert UTC seconds to France local datetime."""
+    dt = datetime.datetime.fromtimestamp(seconds, tz=datetime.UTC).astimezone(
+        FRANCE_TZ
     )
-    return dt
+    return dt.replace(tzinfo=None)
 
 
-def convert_date_to_sec(dt, offset_hours=1):
-    """Convert datetime to seconds with offset."""
-    epoch = datetime.datetime(1970, 1, 1)
-    utc_dt = dt - datetime.timedelta(hours=offset_hours)
-    return (utc_dt - epoch).total_seconds()
+def convert_date_to_sec(dt):
+    """Convert France local datetime to UTC seconds."""
+    aware = dt.replace(tzinfo=FRANCE_TZ)
+    epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
+    return (aware.astimezone(datetime.UTC) - epoch).total_seconds()
 
 
-def convert_date_to_ticks(dt, timescale, offset_hours=1):
-    """Convert datetime to ticks with offset."""
-    return int(round(convert_date_to_sec(dt, offset_hours) * timescale))
+def convert_date_to_ticks(dt, timescale):
+    """Convert France local datetime to ticks."""
+    return int(round(convert_date_to_sec(dt) * timescale))
 
 
 def past(rep, base, duration):
@@ -99,9 +102,9 @@ async def bruteforce(track_id, date, batch_size=20000):
     return valid_ticks
 
 
-def find_nearest_tick_by_hour(base_tick, dt, timescale, duration, offset_hours=1):
+def find_nearest_tick_by_hour(base_tick, dt, timescale, duration):
     """Find the nearest tick for a given datetime."""
-    target_ticks = convert_date_to_ticks(dt, timescale, offset_hours)
+    target_ticks = convert_date_to_ticks(dt, timescale)
     diff_ticks = base_tick - target_ticks
     rep_estimate = diff_ticks / duration
 

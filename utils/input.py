@@ -439,8 +439,16 @@ def select_track(content_dict, quality_spec, content_type):
         candidates.extend(tracks)
 
     if not candidates:
-        logger.warning("No %s track found for '%s'.", content_type, quality_spec)
-        return None
+        if filter_part:
+            logger.warning(
+                "No %s track found for '%s'. Falling back to unfiltered selection.",
+                content_type, quality_spec
+            )
+            for key, tracks in content_dict.items():
+                candidates.extend(tracks)
+        if not candidates:
+            logger.warning("No %s track found for '%s'.", content_type, quality_spec)
+            return None
 
     if pref == "best":
         selected = max(candidates, key=lambda x: x["bandwidth"])

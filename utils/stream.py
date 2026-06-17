@@ -456,8 +456,19 @@ async def save_segments(
 
     # Build list of all segments to download
     segments_to_download = [(start_tick + i * duration, i) for i in range(rep_nb)]
+
+    # In case of resuming, check which segments are already downloaded
+    already_downloaded = [
+        int(f.split(".")[0])
+        for f in os.listdir(f"{output_folder}/segments_{track_id}")
+        if f.endswith(".m4s") and f.split(".")[0].isdigit()
+    ]
+    segments_to_download = [
+        (tick, rep) for tick, rep in segments_to_download if tick not in already_downloaded
+    ]
+
     retry_list = []
-    successful = 0
+    successful = len(already_downloaded)
 
     async with aiohttp.ClientSession() as session:
         # Process segments in batches
