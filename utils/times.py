@@ -12,6 +12,7 @@ from utils.stream import fetch_segment
 from utils.logging_config import logger
 
 FRANCE_TZ = ZoneInfo("Europe/Paris")
+TIMESCALE = 90000
 
 
 def convert_ticks_to_sec(ticks, timescale):
@@ -59,7 +60,7 @@ async def bruteforce(track_id, date, batch_size=20000):
     valid_ticks = []
     total_requests = 288000
 
-    logger.debug("Starting bruteforce for %s near %s", track_id, date)
+    logger.debug("Starting bruteforce for %s near (%s) %s", track_id, date, convert_sec_to_date(convert_ticks_to_sec(date, TIMESCALE)))
 
     start_time = time.time()
 

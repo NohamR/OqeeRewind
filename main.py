@@ -26,6 +26,7 @@ from utils.times import (
     convert_sec_to_date,
     find_nearest_tick_by_hour,
     bruteforce,
+    TIMESCALE,
 )
 from utils.stream import (
     save_segments,
@@ -38,7 +39,6 @@ from utils.stream import (
 from utils.logging_config import setup_logging, logger
 
 load_dotenv()
-TIMESCALE = 90000
 DURATION = 288000
 
 
@@ -71,7 +71,7 @@ def parse_arguments():
     parser.add_argument(
         "--title",
         type=str,
-        default="title",
+        default=None,
         help="Title for the download (default: channel_id_start_date)",
     )
     parser.add_argument("--username", type=str, help="Oqee username for authentication")

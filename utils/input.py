@@ -9,6 +9,7 @@ from InquirerPy.base.control import Choice
 
 from utils.stream import get_manifest, parse_mpd_manifest, organize_by_content_type
 from utils.logging_config import logger
+from utils.times import FRANCE_TZ
 
 SERVICE_PLAN_API_URL = "https://api.oqee.net/api/v6/service_plan"
 EPG_API_URL = "https://api.oqee.net/api/v1/epg/all/{unix}"
@@ -484,7 +485,7 @@ def get_epg_data_at(dt: datetime.datetime):
     else:
         dt_aligned = dt.replace(minute=0, second=0, microsecond=0)
 
-    unix_time = int(dt_aligned.timestamp())
+    unix_time = int(dt_aligned.replace(tzinfo=FRANCE_TZ).timestamp())
     logger.info("Fetching EPG for aligned time: %s (unix=%d)", dt_aligned, unix_time)
 
     try:
@@ -533,8 +534,8 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
         # Extract the live data from the program
         live_data = program.get("live", program)
         title = live_data.get("title", "Untitled")
-        start_time = datetime.datetime.fromtimestamp(live_data.get("start", 0))
-        end_time = datetime.datetime.fromtimestamp(live_data.get("end", 0))
+        start_time = datetime.datetime.fromtimestamp(live_data.get("start", 0), tz=FRANCE_TZ).replace(tzinfo=None)
+        end_time = datetime.datetime.fromtimestamp(live_data.get("end", 0), tz=FRANCE_TZ).replace(tzinfo=None)
         duration_min = (end_time - start_time).total_seconds() / 60
 
         choice_name = (
@@ -586,8 +587,8 @@ def select_program_from_epg(programs, original_start_date, original_end_date):
 
         # Extract live data and convert program timestamps to datetime objects
         live_data = selected_program.get("live", selected_program)
-        program_start = datetime.datetime.fromtimestamp(live_data.get("start", 0))
-        program_end = datetime.datetime.fromtimestamp(live_data.get("end", 0))
+        program_start = datetime.datetime.fromtimestamp(live_data.get("start", 0), tz=FRANCE_TZ).replace(tzinfo=None)
+        program_end = datetime.datetime.fromtimestamp(live_data.get("end", 0), tz=FRANCE_TZ).replace(tzinfo=None)
         program_title = live_data.get("title", "Untitled")
 
         logger.info("Selected program:")
