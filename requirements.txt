@@ -6,5 +6,5 @@ python-dotenv==1.2.2
 pywidevine==1.9.0
 Requests==2.34.2
 tabulate==0.10.0
-tqdm==4.65.0
+tqdm==4.68.4
 tzdata==2026.3
