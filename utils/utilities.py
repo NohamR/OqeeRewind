@@ -39,7 +39,7 @@ def merge_segments(input_folder: str, track_id: str, output_file: str):
     with open(output_file, "wb") as outfile:
         for fname in segment_files:
             with open(f"{segment_folder}/{fname}", "rb") as infile:
-                outfile.write(infile.read())
+                shutil.copyfileobj(infile, outfile)
     logger.info("Merged segments into %s", output_file)
 
 
@@ -104,7 +104,7 @@ def decrypt(segment_dir, init_path, output_file, key):
         with open(chunk_merged, "wb") as outfile:
             for fname in chunk_files:
                 with open(os.path.join(segment_dir, fname), "rb") as infile:
-                    outfile.write(infile.read())
+                    shutil.copyfileobj(infile, outfile)
 
         logger.debug("Decrypting chunk %d", chunk_num)
         result = subprocess.run(

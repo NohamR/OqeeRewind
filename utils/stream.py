@@ -18,6 +18,16 @@ ET.register_namespace("", "urn:mpeg:dash:schema:mpd:2011")
 ET.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
 ET.register_namespace("cenc", "urn:mpeg:cenc:2013")
 
+SEGMENT_HEADERS = {
+    "Accept": "*/*",
+    "Referer": "https://tv.free.fr/",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/143.0.0.0 Safari/537.36"
+    ),
+}
+
 
 def parse_mpd_manifest(mpd_content: str) -> Dict[str, Any]:
     """Parse an MPD manifest and extract metadata.
@@ -340,7 +350,7 @@ def get_manifest(manifest_id):
 
 
 async def fetch_segment(session, ticks, track_id):
-    """Fetch a media segment asynchronously.
+    """Probe whether a media segment exists using a lightweight HEAD request.
 
     Args:
         session: The aiohttp ClientSession.
@@ -348,20 +358,11 @@ async def fetch_segment(session, ticks, track_id):
         track_id: The track identifier.
 
     Returns:
-        The tick value if successful, None otherwise.
+        The tick value if the segment exists, None otherwise.
     """
     url = f"https://media4.stream.proxad.net/media/{track_id}_{ticks}"
-    headers = {
-        "Accept": "*/*",
-        "Referer": "https://tv.free.fr/",
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/143.0.0.0 Safari/537.36"
-        ),
-    }
     try:
-        async with session.get(url, headers=headers) as resp:
+        async with session.head(url, headers=SEGMENT_HEADERS) as resp:
             if resp.status == 200:
                 return ticks
             return None
@@ -377,16 +378,7 @@ def get_init(output_folder, track_id):
         track_id: The track identifier.
     """
     url = f"https://media4.stream.proxad.net/media/{track_id}_init"
-    headers = {
-        "Accept": "*/*",
-        "Referer": "https://tv.free.fr/",
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/143.0.0.0 Safari/537.36"
-        ),
-    }
-    response = requests.get(url, headers=headers, timeout=10)
+    response = requests.get(url, headers=SEGMENT_HEADERS, timeout=10)
     if response.status_code == 200:
         os.makedirs(f"{output_folder}/segments_{track_id}", exist_ok=True)
         init_path = f"{output_folder}/segments_{track_id}/init.mp4"
@@ -418,17 +410,8 @@ async def save_segments(
             Tuple of (success: bool, tick: int, rep: int)
         """
         url = f"https://media4.stream.proxad.net/media/{track_id}_{tick}"
-        headers = {
-            "Accept": "*/*",
-            "Referer": "https://tv.free.fr/",
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/143.0.0.0 Safari/537.36"
-            ),
-        }
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(url, headers=SEGMENT_HEADERS) as resp:
                 if resp.status == 200:
                     content = await resp.read()
                     filename = f"{output_folder}/segments_{track_id}/{tick}.m4s"
@@ -458,11 +441,11 @@ async def save_segments(
     segments_to_download = [(start_tick + i * duration, i) for i in range(rep_nb)]
 
     # In case of resuming, check which segments are already downloaded
-    already_downloaded = [
+    already_downloaded = {
         int(f.split(".")[0])
         for f in os.listdir(f"{output_folder}/segments_{track_id}")
         if f.endswith(".m4s") and f.split(".")[0].isdigit()
-    ]
+    }
     segments_to_download = [
         (tick, rep) for tick, rep in segments_to_download if tick not in already_downloaded
     ]

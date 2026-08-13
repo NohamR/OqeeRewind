@@ -55,45 +55,66 @@ def future(rep, base, duration):
     return base + rep * duration
 
 
-async def bruteforce(track_id, date, batch_size=20000):
-    """Bruteforce segments to find valid ticks."""
+async def bruteforce(track_id, date, batch_size=20000, concurrency=100, session=None):
+    """Bruteforce segments to find valid ticks.
+
+    Args:
+        track_id: The track identifier.
+        date: The base tick to start probing from.
+        batch_size: Number of ticks to probe per batch.
+        concurrency: Maximum number of in-flight requests at once.
+        session: Optional shared aiohttp session. A new one is created if omitted.
+
+    Returns:
+        List of valid ticks found (empty if none).
+    """
     valid_ticks = []
     total_requests = 288000
 
     logger.debug("Starting bruteforce for %s near (%s) %s", track_id, date, convert_sec_to_date(convert_ticks_to_sec(date, TIMESCALE)))
 
     start_time = time.time()
+    owns_session = session is None
+    if owns_session:
+        session = aiohttp.ClientSession()
 
     try:
-        async with aiohttp.ClientSession() as session:
-            for batch_start in range(0, total_requests, batch_size):
-                batch_end = min(batch_start + batch_size, total_requests)
-                tasks = [
-                    fetch_segment(session, t + date, track_id)
-                    for t in range(batch_start, batch_end)
-                ]
+        semaphore = asyncio.Semaphore(concurrency)
 
-                results = []
-                for coro in tqdm(
-                    asyncio.as_completed(tasks),
-                    total=len(tasks),
-                    desc="Bruteforce",
-                    unit="req",
-                ):
-                    result = await coro
-                    results.append(result)
+        async def probe(t):
+            async with semaphore:
+                return await fetch_segment(session, t + date, track_id)
 
-                valid_ticks.extend(
-                    [r for r in results if r and not isinstance(r, Exception)]
-                )
+        for batch_start in range(0, total_requests, batch_size):
+            batch_end = min(batch_start + batch_size, total_requests)
+            tasks = [probe(t) for t in range(batch_start, batch_end)]
 
-                # Stop if we found valid ticks
-                if valid_ticks:
-                    logger.debug("Found valid ticks: %s, stopping bruteforce.", valid_ticks)
-                    break
+            results = []
+            for coro in tqdm(
+                asyncio.as_completed(tasks),
+                total=len(tasks),
+                desc="Bruteforce",
+                unit="req",
+            ):
+                result = await coro
+                results.append(result)
+
+            valid_ticks.extend(
+                [r for r in results if r and not isinstance(r, Exception)]
+            )
+
+            # Stop if we found valid ticks
+            if valid_ticks:
+                logger.debug("Found valid ticks: %s, stopping bruteforce.", valid_ticks)
+                for task in tasks:
+                    task.cancel()
+                break
 
     except KeyboardInterrupt:
         logger.error("Interrupted by user (Ctrl+C)")
+    finally:
+        if owns_session:
+            await session.close()
 
     elapsed = time.time() - start_time
     logger.debug("Completed in %.2fs", elapsed)

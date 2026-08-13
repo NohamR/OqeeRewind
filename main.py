@@ -9,6 +9,7 @@ import shutil
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import aiohttp
 from utils.input import (
     stream_selection,
     get_date_input,
@@ -190,45 +191,21 @@ if __name__ == "__main__":
             mpd_content = get_manifest(dash_id)
             manifest_info = parse_mpd_manifest(mpd_content)
 
-            avc_tick = None
+            avc_track_id = None
             if "video" in selections_avc:
                 avc_sel = selections_avc["video"]
                 avc_init_segment = avc_sel["segments"]["initialization"]
                 avc_track_id = avc_init_segment.split("/")[-1].split("_init")[0]
-
-                logger.info("Bruteforcing AVC video track %s...", avc_track_id)
-                avc_valid_ticks = asyncio.run(
-                    bruteforce(avc_track_id, start_tick_user, batch_size)
-                )
-                if len(avc_valid_ticks) == 0:
-                    logger.warning(
-                        "No valid ticks found for AVC video. AVC tracks will be removed from manifest."
-                    )
-                else:
-                    avc_tick = avc_valid_ticks[0]
-                    logger.info("AVC video tick found: %s", avc_tick)
             else:
                 logger.warning(
                     "No AVC video track available. AVC tracks will be removed from manifest."
                 )
 
-            hevc_tick = None
+            hevc_track_id = None
             if "video" in selections_hevc:
                 hevc_sel = selections_hevc["video"]
                 hevc_init_segment = hevc_sel["segments"]["initialization"]
                 hevc_track_id = hevc_init_segment.split("/")[-1].split("_init")[0]
-
-                logger.info("Bruteforcing HEVC video track %s...", hevc_track_id)
-                hevc_valid_ticks = asyncio.run(
-                    bruteforce(hevc_track_id, start_tick_user, batch_size)
-                )
-                if len(hevc_valid_ticks) == 0:
-                    logger.warning(
-                        "No valid ticks found for HEVC video. HEVC tracks will be removed from manifest."
-                    )
-                else:
-                    hevc_tick = hevc_valid_ticks[0]
-                    logger.info("HEVC video tick found: %s", hevc_tick)
             else:
                 logger.warning(
                     "No HEVC video track available. HEVC tracks will be removed from manifest."
@@ -239,10 +216,52 @@ if __name__ == "__main__":
             audio_init_segment = audio_sel["segments"]["initialization"]
             audio_track_id = audio_init_segment.split("/")[-1].split("_init")[0]
 
-            logger.info("Bruteforcing audio track %s...", audio_track_id)
-            audio_valid_ticks = asyncio.run(
-                bruteforce(audio_track_id, start_tick_user, batch_size)
-            )
+            async def bruteforce_all():
+                async with aiohttp.ClientSession() as session:
+                    avc_ticks = None
+                    hevc_ticks = None
+                    audio_ticks = []
+
+                    if avc_track_id:
+                        logger.info(
+                            "Bruteforcing AVC video track %s...", avc_track_id
+                        )
+                        avc_valid = await bruteforce(
+                            avc_track_id, start_tick_user, batch_size, session=session
+                        )
+                        if len(avc_valid) == 0:
+                            logger.warning(
+                                "No valid ticks found for AVC video. AVC tracks will be removed from manifest."
+                            )
+                        else:
+                            avc_ticks = avc_valid[0]
+                            logger.info("AVC video tick found: %s", avc_ticks)
+
+                    if hevc_track_id:
+                        logger.info(
+                            "Bruteforcing HEVC video track %s...", hevc_track_id
+                        )
+                        hevc_valid = await bruteforce(
+                            hevc_track_id, start_tick_user, batch_size, session=session
+                        )
+                        if len(hevc_valid) == 0:
+                            logger.warning(
+                                "No valid ticks found for HEVC video. HEVC tracks will be removed from manifest."
+                            )
+                        else:
+                            hevc_ticks = hevc_valid[0]
+                            logger.info("HEVC video tick found: %s", hevc_ticks)
+
+                    logger.info("Bruteforcing audio track %s...", audio_track_id)
+                    audio_valid = await bruteforce(
+                        audio_track_id, start_tick_user, batch_size, session=session
+                    )
+                    if len(audio_valid) > 0:
+                        audio_ticks = audio_valid
+
+                    return avc_ticks, hevc_ticks, audio_ticks
+
+            avc_tick, hevc_tick, audio_valid_ticks = asyncio.run(bruteforce_all())
             if len(audio_valid_ticks) == 0:
                 logger.error("No valid ticks found for audio.")
                 sys.exit(1)
