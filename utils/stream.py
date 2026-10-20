@@ -342,7 +342,7 @@ def get_manifest(manifest_id):
 
     format_id = 1
     url = (
-        "https://api-proxad.dc2.oqee.net/playlist/v1/live/"
+        "https://api-proxad.oqee.net/playlist/v1/live/"
         f"{manifest_id}/{format_id}/live.mpd"
     )
     response = requests.get(url, headers=headers, timeout=10)
